@@ -1,10 +1,23 @@
-# Handy
+# Curano AI Dictate
 
 [![Discord](https://img.shields.io/badge/Discord-%235865F2.svg?style=for-the-badge&logo=discord&logoColor=white)](https://discord.com/invite/WVBeWsNXK4)
 
-**A free, open source, and extensible speech-to-text application that works completely offline.**
+**A Curano AI fork of Handy, preserving local desktop dictation while preparing for Curano LiveSTT server-based transcription.**
 
-Handy is a cross-platform desktop application that provides simple, privacy-focused speech transcription. Press a shortcut, speak, and have your words appear in any text field. This happens on your own computer without sending any information to the cloud.
+Curano AI Dictate is a Curano AI fork of Handy, a cross-platform desktop speech-to-text application. The fork preserves Handy's local transcription backend and is being extended with Curano LiveSTT support for server-based live transcription.
+
+Press a shortcut, speak, and have your words appear in any text field. Privacy depends on the selected transcription backend: Local mode processes audio on device, while Curano LiveSTT mode sends audio to the configured Curano LiveSTT server for transcription.
+
+## Backend Modes
+
+- **Local model**: Offline transcription using local STT models such as Whisper or Parakeet.
+- **Curano LiveSTT**: Planned server-based live transcription using Curano's WebSocket API. In this mode, microphone audio is sent to the configured LiveSTT server.
+
+For the planned LiveSTT architecture and protocol notes, see [docs/livestt-integration-plan.md](docs/livestt-integration-plan.md).
+
+## Attribution
+
+Curano AI Dictate is forked from [Handy](https://github.com/cjpais/Handy) by cjpais. The original project provides the local-first desktop dictation foundation.
 
 ## Why Handy?
 
@@ -12,7 +25,7 @@ Handy was created to fill the gap for a truly open source, extensible speech-to-
 
 - **Free**: Accessibility tooling belongs in everyone's hands, not behind a paywall
 - **Open Source**: Together we can build further. Extend Handy for yourself and contribute to something bigger
-- **Private**: Your voice stays on your computer. Get transcriptions without sending audio to the cloud
+- **Private local mode**: With the Local backend, your voice stays on your computer and transcription does not send audio to the cloud
 - **Simple**: One tool, one job. Transcribe what you say and put it into a text box
 
 Handy isn't trying to be the best speech-to-text app—it's trying to be the most forkable one.
@@ -21,16 +34,18 @@ Handy isn't trying to be the best speech-to-text app—it's trying to be the mos
 
 1. **Press** a configurable keyboard shortcut to start/stop recording (or use push-to-talk mode)
 2. **Speak** your words while the shortcut is active
-3. **Release** and Handy processes your speech using Whisper
+3. **Release** and the selected backend processes your speech
 4. **Get** your transcribed text pasted directly into whatever app you're using
 
-The process is entirely local:
+With the Local backend, the process is entirely local:
 
 - Silence is filtered using VAD (Voice Activity Detection) with Silero
 - Transcription uses your choice of models:
   - **Whisper models** (Small/Medium/Turbo/Large) with GPU acceleration when available
   - **Parakeet V3** - CPU-optimized model with excellent performance and automatic language detection
 - Works on Windows, macOS, and Linux
+
+With the planned Curano LiveSTT backend, recording will stream microphone audio to a configured Curano LiveSTT server and paste only final text returned by that server.
 
 ## Quick Start
 
