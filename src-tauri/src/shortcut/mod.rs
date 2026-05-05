@@ -23,7 +23,7 @@ use tauri_plugin_autostart::ManagerExt;
 use crate::settings::APPLE_INTELLIGENCE_DEFAULT_MODEL_ID;
 use crate::settings::{
     self, get_settings, AutoSubmitKey, ClipboardHandling, KeyboardImplementation, LLMPrompt,
-    OverlayPosition, PasteMethod, ShortcutBinding, SoundTheme, TypingTool,
+    OverlayPosition, PasteMethod, ShortcutBinding, SoundTheme, TranscriptionBackend, TypingTool,
     APPLE_INTELLIGENCE_PROVIDER_ID,
 };
 use crate::tray;
@@ -536,6 +536,99 @@ pub fn change_selected_language_setting(app: AppHandle, language: String) -> Res
 
 #[tauri::command]
 #[specta::specta]
+pub fn change_transcription_backend_setting(
+    app: AppHandle,
+    backend: TranscriptionBackend,
+) -> Result<(), String> {
+    let mut settings = settings::get_settings(&app);
+    let should_reset_livestt_state =
+        should_reset_livestt_state_for_backend_change(settings.transcription_backend, backend);
+
+    if should_reset_livestt_state {
+        clear_livestt_runtime_state(&app);
+    }
+
+    settings.transcription_backend = backend;
+    settings::write_settings(&app, settings);
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn change_livestt_server_url_setting(app: AppHandle, server_url: String) -> Result<(), String> {
+    let normalized = settings::normalize_livestt_server_url_for_settings(&server_url)?;
+    let mut settings = settings::get_settings(&app);
+
+    if !should_reset_livestt_state_for_server_url_change(&settings.livestt_server_url, &normalized)
+    {
+        return Ok(());
+    }
+
+    clear_livestt_runtime_state(&app);
+    settings.livestt_server_url = normalized;
+    settings::write_settings(&app, settings);
+    Ok(())
+}
+
+fn should_reset_livestt_state_for_backend_change(
+    current_backend: TranscriptionBackend,
+    next_backend: TranscriptionBackend,
+) -> bool {
+    current_backend == TranscriptionBackend::LiveStt
+        && next_backend != TranscriptionBackend::LiveStt
+}
+
+fn should_reset_livestt_state_for_server_url_change(
+    current_server_url: &str,
+    next_server_url: &str,
+) -> bool {
+    current_server_url != next_server_url
+}
+
+fn clear_livestt_runtime_state(app: &AppHandle) {
+    if let Some(auth_state) = app.try_state::<crate::livestt::auth::LiveSttAuthState>() {
+        auth_state.clear_tokens();
+    }
+
+    if let Some(manager) =
+        app.try_state::<std::sync::Arc<crate::livestt::session::LiveSttSessionManager>>()
+    {
+        let _ = manager.cancel_session();
+    }
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn change_livestt_consultation_id_setting(
+    app: AppHandle,
+    consultation_id: Option<String>,
+) -> Result<(), String> {
+    settings::validate_livestt_consultation_id(consultation_id.as_deref())?;
+    let mut settings = settings::get_settings(&app);
+    settings.livestt_consultation_id = consultation_id
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(ToString::to_string);
+    settings::write_settings(&app, settings);
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn change_livestt_finalize_timeout_ms_setting(
+    app: AppHandle,
+    timeout_ms: u64,
+) -> Result<(), String> {
+    settings::validate_livestt_finalize_timeout_ms(timeout_ms)?;
+    let mut settings = settings::get_settings(&app);
+    settings.livestt_finalize_timeout_ms = timeout_ms;
+    settings::write_settings(&app, settings);
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
 pub fn change_overlay_position_setting(app: AppHandle, position: String) -> Result<(), String> {
     let mut settings = settings::get_settings(&app);
     let parsed = match position.as_str() {
@@ -554,6 +647,43 @@ pub fn change_overlay_position_setting(app: AppHandle, position: String) -> Resu
     crate::utils::update_overlay_position(&app);
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn backend_change_only_resets_livestt_state_when_switching_away_from_livestt() {
+        assert!(!should_reset_livestt_state_for_backend_change(
+            TranscriptionBackend::Local,
+            TranscriptionBackend::Local,
+        ));
+        assert!(!should_reset_livestt_state_for_backend_change(
+            TranscriptionBackend::Local,
+            TranscriptionBackend::LiveStt,
+        ));
+        assert!(!should_reset_livestt_state_for_backend_change(
+            TranscriptionBackend::LiveStt,
+            TranscriptionBackend::LiveStt,
+        ));
+        assert!(should_reset_livestt_state_for_backend_change(
+            TranscriptionBackend::LiveStt,
+            TranscriptionBackend::Local,
+        ));
+    }
+
+    #[test]
+    fn server_url_change_only_resets_livestt_state_when_value_changes() {
+        assert!(!should_reset_livestt_state_for_server_url_change(
+            "https://example.com",
+            "https://example.com",
+        ));
+        assert!(should_reset_livestt_state_for_server_url_change(
+            "https://example.com",
+            "https://other.example.com",
+        ));
+    }
 }
 
 #[tauri::command]

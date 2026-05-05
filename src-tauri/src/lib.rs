@@ -8,7 +8,9 @@ mod clipboard;
 mod commands;
 mod helpers;
 mod input;
+mod livestt;
 mod llm_client;
+mod log_sink;
 mod managers;
 mod overlay;
 pub mod portable;
@@ -16,6 +18,7 @@ mod settings;
 mod shortcut;
 mod signal_handle;
 mod transcription_coordinator;
+mod transcription_finalizer;
 mod tray;
 mod tray_i18n;
 mod utils;
@@ -322,6 +325,8 @@ pub fn run(cli_args: CliArgs) {
     // when the variable is unset
     let console_filter = build_console_filter();
 
+    let log_ring = Arc::new(log_sink::LogRing::default());
+
     let specta_builder = Builder::<tauri::Wry>::new()
         .commands(collect_commands![
             shortcut::change_binding,
@@ -334,6 +339,10 @@ pub fn run(cli_args: CliArgs) {
             shortcut::change_autostart_setting,
             shortcut::change_translate_to_english_setting,
             shortcut::change_selected_language_setting,
+            shortcut::change_transcription_backend_setting,
+            shortcut::change_livestt_server_url_setting,
+            shortcut::change_livestt_consultation_id_setting,
+            shortcut::change_livestt_finalize_timeout_ms_setting,
             shortcut::change_overlay_position_setting,
             shortcut::change_debug_mode_setting,
             shortcut::change_word_correction_threshold_setting,
@@ -389,6 +398,11 @@ pub fn run(cli_args: CliArgs) {
             commands::check_apple_intelligence_available,
             commands::initialize_enigo,
             commands::initialize_shortcuts,
+            commands::get_log_buffer,
+            commands::clear_log_buffer,
+            livestt::auth::livestt_login,
+            livestt::auth::livestt_logout,
+            livestt::auth::livestt_auth_status,
             commands::models::get_available_models,
             commands::models::get_model_info,
             commands::models::download_model,
@@ -470,6 +484,10 @@ pub fn run(cli_args: CliArgs) {
                         let file_level = FILE_LOG_LEVEL.load(Ordering::Relaxed);
                         metadata.level() <= level_filter_from_u8(file_level)
                     }),
+                    // In-memory ring buffer for the Debug log console
+                    Target::new(TargetKind::Dispatch(log_sink::make_fern_dispatch(
+                        log_ring.clone(),
+                    ))),
                 ])
                 .build(),
         );
@@ -505,15 +523,22 @@ pub fn run(cli_args: CliArgs) {
             Some(vec![]),
         ))
         .manage(cli_args.clone())
+        .manage(log_ring.clone())
+        .manage(livestt::auth::LiveSttAuthState::default())
+        .manage(Arc::new(livestt::session::LiveSttSessionManager::default()))
         .setup(move |app| {
             specta_builder.mount_events(app);
+
+            // Wire the log ring to the app handle so it can emit events
+            app.state::<Arc<log_sink::LogRing>>()
+                .set_app_handle(app.handle().clone());
 
             // Create main window programmatically so we can set data_directory
             // for portable mode (redirects WebView2 cache to portable Data dir)
             let mut win_builder =
                 tauri::WebviewWindowBuilder::new(app, "main", tauri::WebviewUrl::App("/".into()))
                     .title("Handy")
-                    .inner_size(680.0, 570.0)
+                    .inner_size(780.0, 570.0)
                     .min_inner_size(680.0, 570.0)
                     .resizable(true)
                     .maximizable(false)
