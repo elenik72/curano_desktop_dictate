@@ -112,7 +112,9 @@ export const SettingContainer: React.FC<SettingContainerProps> = ({
           >
             {title}
           </h3>
-          <p className={`text-sm text-slate-500 ${disabled ? "opacity-50" : ""}`}>
+          <p
+            className={`text-sm text-slate-500 ${disabled ? "opacity-50" : ""}`}
+          >
             {description}
           </p>
         </div>

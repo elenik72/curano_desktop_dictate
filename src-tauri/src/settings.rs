@@ -168,7 +168,8 @@ pub enum RecordingRetentionPeriod {
 #[serde(rename_all = "snake_case")]
 pub enum KeyboardImplementation {
     Tauri,
-    HandyKeys,
+    #[serde(rename = "handy_keys")]
+    NativeKeys,
 }
 
 impl Default for KeyboardImplementation {
@@ -176,7 +177,7 @@ impl Default for KeyboardImplementation {
         #[cfg(target_os = "linux")]
         return KeyboardImplementation::Tauri;
         #[cfg(not(target_os = "linux"))]
-        return KeyboardImplementation::HandyKeys;
+        return KeyboardImplementation::NativeKeys;
     }
 }
 
@@ -466,6 +467,24 @@ pub struct AppSettings {
     pub livestt_consultation_id: Option<String>,
     #[serde(default = "default_livestt_finalize_timeout_ms")]
     pub livestt_finalize_timeout_ms: u64,
+    #[serde(default = "default_speechmike_auto_select")]
+    pub speechmike_auto_select: bool,
+    #[serde(default = "default_speechmike_button_mapping_enabled")]
+    pub speechmike_button_mapping_enabled: bool,
+    #[serde(default)]
+    pub speechmike_last_seen_name: Option<String>,
+    #[serde(default)]
+    pub selected_microphone_user_overridden: bool,
+    #[serde(default)]
+    pub livesttt_raw_hid_debug: bool,
+}
+
+fn default_speechmike_auto_select() -> bool {
+    true
+}
+
+fn default_speechmike_button_mapping_enabled() -> bool {
+    true
 }
 
 fn default_model() -> String {
@@ -950,6 +969,11 @@ pub fn get_default_settings() -> AppSettings {
         livestt_audio_format: LiveSttAudioFormat::default(),
         livestt_consultation_id: None,
         livestt_finalize_timeout_ms: default_livestt_finalize_timeout_ms(),
+        speechmike_auto_select: default_speechmike_auto_select(),
+        speechmike_button_mapping_enabled: default_speechmike_button_mapping_enabled(),
+        speechmike_last_seen_name: None,
+        selected_microphone_user_overridden: false,
+        livesttt_raw_hid_debug: false,
     }
 }
 

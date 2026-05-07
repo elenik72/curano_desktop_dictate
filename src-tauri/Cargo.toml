@@ -90,6 +90,9 @@ tauri-plugin-global-shortcut = "2.3.1"
 tauri-plugin-single-instance = "2.3.2"
 tauri-plugin-updater = "2.10.0"
 
+[target.'cfg(any(target_os = "macos", target_os = "windows"))'.dependencies]
+hidapi = "2"
+
 [target.'cfg(windows)'.dependencies]
 transcribe-rs = { version = "0.3.3", features = ["whisper-vulkan", "ort-directml"] }
 windows = { version = "0.61.3", features = [

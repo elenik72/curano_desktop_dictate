@@ -6,6 +6,7 @@ pub mod audio_toolkit;
 pub mod cli;
 mod clipboard;
 mod commands;
+mod devices;
 mod helpers;
 mod input;
 mod livestt;
@@ -28,6 +29,7 @@ pub use cli::CliArgs;
 use specta_typescript::{BigIntExportBehavior, Typescript};
 use tauri_specta::{collect_commands, collect_events, Builder};
 
+use devices::speechmike::SpeechMikeManager;
 use env_filter::Builder as EnvFilterBuilder;
 use managers::audio::AudioRecordingManager;
 use managers::history::HistoryManager;
@@ -162,11 +164,15 @@ fn initialize_core_logic(app_handle: &AppHandle) {
     // Apply accelerator preferences before any model loads
     managers::transcription::apply_accelerator_settings(app_handle);
 
+    // SpeechMike USB HID manager (no-op stub on Linux).
+    let speechmike_manager = Arc::new(SpeechMikeManager::new(app_handle));
+
     // Add managers to Tauri's managed state
     app_handle.manage(recording_manager.clone());
     app_handle.manage(model_manager.clone());
     app_handle.manage(transcription_manager.clone());
     app_handle.manage(history_manager.clone());
+    app_handle.manage(speechmike_manager);
 
     // Note: Shortcuts are NOT initialized here.
     // The frontend is responsible for calling the `initialize_shortcuts` command
@@ -429,6 +435,9 @@ pub fn run(cli_args: CliArgs) {
             commands::audio::set_clamshell_microphone,
             commands::audio::get_clamshell_microphone,
             commands::audio::is_recording,
+            commands::speechmike::get_speechmike_status,
+            commands::speechmike::set_speechmike_auto_select,
+            commands::speechmike::set_speechmike_button_mapping_enabled,
             commands::transcription::set_model_unload_timeout,
             commands::transcription::get_model_load_status,
             commands::transcription::unload_model_manually,
@@ -537,7 +546,7 @@ pub fn run(cli_args: CliArgs) {
             // for portable mode (redirects WebView2 cache to portable Data dir)
             let mut win_builder =
                 tauri::WebviewWindowBuilder::new(app, "main", tauri::WebviewUrl::App("/".into()))
-                    .title("Handy")
+                    .title("Curano AI Dictate")
                     .inner_size(780.0, 570.0)
                     .min_inner_size(680.0, 570.0)
                     .resizable(true)

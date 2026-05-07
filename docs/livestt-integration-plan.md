@@ -15,9 +15,9 @@ The Local backend remains available for offline, on-device transcription. The Cu
 - Forked from Handy by cjpais
 - Local backend remains available
 
-## Existing Handy behavior
+## Existing Handy Behavior
 
-The existing Handy flow is local-first:
+The existing local flow is local-first:
 
 1. A configurable shortcut starts recording.
 2. The same shortcut, or push-to-talk release, stops recording.

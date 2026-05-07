@@ -11,6 +11,7 @@ import { useSettings } from "../../../hooks/useSettings";
 import { VolumeSlider } from "../VolumeSlider";
 import { MuteWhileRecording } from "../MuteWhileRecording";
 import { ModelSettingsCard } from "./ModelSettingsCard";
+import { SpeechMikeSettings } from "./SpeechMikeSettings";
 import { TranscriptionBackendSettings } from "./TranscriptionBackendSettings";
 
 export const GeneralSettings: React.FC = () => {
@@ -41,6 +42,7 @@ export const GeneralSettings: React.FC = () => {
         />
         <VolumeSlider disabled={!audioFeedbackEnabled} />
       </SettingsGroup>
+      <SpeechMikeSettings />
     </div>
   );
 };

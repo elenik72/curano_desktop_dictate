@@ -9,21 +9,23 @@ import { useOsType } from "../../hooks/useOsType";
 import { commands } from "@/bindings";
 import { toast } from "sonner";
 
-interface HandyKeysShortcutInputProps {
+interface NativeKeysShortcutInputProps {
   descriptionMode?: "inline" | "tooltip";
   grouped?: boolean;
   shortcutId: string;
   disabled?: boolean;
 }
 
-interface HandyKeysEvent {
+interface NativeKeysEvent {
   modifiers: string[];
   key: string | null;
   is_key_down: boolean;
   hotkey_string: string;
 }
 
-export const HandyKeysShortcutInput: React.FC<HandyKeysShortcutInputProps> = ({
+export const NativeKeysShortcutInput: React.FC<
+  NativeKeysShortcutInputProps
+> = ({
   descriptionMode = "tooltip",
   grouped = false,
   shortcutId,
@@ -80,7 +82,7 @@ export const HandyKeysShortcutInput: React.FC<HandyKeysShortcutInputProps> = ({
 
     const setupListener = async () => {
       // Listen for key events from backend
-      const unlisten = await listen<HandyKeysEvent>(
+      const unlisten = await listen<NativeKeysEvent>(
         "handy-keys-event",
         async (event) => {
           if (cleanup) return;

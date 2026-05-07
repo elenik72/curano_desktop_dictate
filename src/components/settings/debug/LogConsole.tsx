@@ -57,9 +57,7 @@ function LogRow({ entry }: { entry: LogEntry }) {
       >
         {entry.source}
       </span>
-      <span className="min-w-0 truncate text-slate-400">
-        {entry.target}
-      </span>
+      <span className="min-w-0 truncate text-slate-400">{entry.target}</span>
       <span className="min-w-0 truncate text-slate-700">{entry.message}</span>
     </div>
   );

@@ -195,6 +195,27 @@
       "pushToTalk": {
         "label": "Push To Talk",
         "description": "Hold to record, release to stop"
+      },
+      "speechmike": {
+        "title": "Philips SpeechMike",
+        "status": "Device Status",
+        "connected": "Connected",
+        "disconnected": "Not connected",
+        "notConnected": "Not connected",
+        "unknownDevice": "Philips SpeechMike",
+        "blockedTitle": "Button channel is blocked",
+        "blockedBy": "Close the following application(s) and reconnect: {{processes}}",
+        "blockedUnknown": "Another application is holding the HID channel. Close it and reconnect the device.",
+        "autoSelect": "Auto-select as microphone",
+        "autoSelectDescription": "Automatically set SpeechMike as the active microphone when connected. Disable to keep your current microphone selection.",
+        "buttonMapping": "Use device buttons for recording",
+        "buttonMappingDescription": "Map hardware buttons (REC, STOP, EOL, Trigger) to Curano recording actions.",
+        "mappingTable": "Button mapping",
+        "actionTranscribe": "Start / stop recording (toggle or push-to-talk)",
+        "actionCancel": "Cancel current recording",
+        "actionPostProcess": "Record with AI post-processing",
+        "actionTranscribePtt": "Start / stop recording (push-to-talk)",
+        "learnSpeechControl": "Learn about SpeechControl SDK (Windows)"
       }
     },
     "transcriptionBackend": {
@@ -332,11 +353,11 @@
       },
       "autostart": {
         "label": "Launch on Startup",
-        "description": "Automatically start Handy when you log in to your computer."
+        "description": "Automatically start Curano AI Dictate when you log in to your computer."
       },
       "showTrayIcon": {
         "label": "Show Tray Icon",
-        "description": "Display the Handy icon in the system tray."
+        "description": "Display the Curano AI Dictate icon in the system tray."
       },
       "overlay": {
         "title": "Overlay Position",
@@ -526,7 +547,7 @@
       },
       "updateChecks": {
         "label": "Check for Updates",
-        "description": "Uses inherited upstream Handy release metadata. Leave this off until Curano release infrastructure is configured."
+        "description": "Checks Curano AI Dictate release metadata."
       },
       "soundTheme": {
         "label": "Sound Theme",
@@ -602,20 +623,20 @@
       },
       "sourceCode": {
         "title": "Source Code",
-        "description": "View the Curano AI Dictate source code. Forked from Handy by cjpais.",
+        "description": "View the Curano AI Dictate source code. Forked from Handy.",
         "button": "View Curano Repo"
       },
       "supportDevelopment": {
-        "title": "Support Upstream Handy",
-        "description": "Support the original Handy project by cjpais.",
-        "button": "Donate to Handy"
+        "title": "Project",
+        "description": "Open the Curano AI Dictate project repository.",
+        "button": "Open Curano Repo"
       },
       "acknowledgments": {
         "title": "Acknowledgments",
         "whisper": {
           "title": "Whisper.cpp",
           "description": "High-performance inference of OpenAI's Whisper automatic speech recognition model",
-          "details": "Handy uses Whisper.cpp for fast, local speech-to-text processing. Thanks to the amazing work by Georgi Gerganov and contributors."
+          "details": "Curano AI Dictate uses Whisper.cpp for fast, local speech-to-text processing. Thanks to the amazing work by Georgi Gerganov and contributors."
         }
       }
     }

@@ -1,6 +1,7 @@
 pub mod audio;
 pub mod history;
 pub mod models;
+pub mod speechmike;
 pub mod transcription;
 
 use crate::log_sink::{LogEntry, LogRing};

@@ -136,7 +136,6 @@ export const LiveSttAdvancedSettings: React.FC<
           <p className="mt-2 text-xs text-red-500">{finalizeTimeoutError}</p>
         )}
       </SettingContainer>
-
     </>
   );
 };

@@ -81,6 +81,80 @@ impl Drop for FinishGuard {
     }
 }
 
+// ── Hardware-button action dispatch ──────────────────────────────────────────
+
+/// What the caller wants to happen (independent of how it was triggered).
+#[allow(dead_code)]
+pub enum ActionIntent {
+    Transcribe,
+    TranscribeWithPostProcess,
+    Cancel,
+}
+
+/// Who triggered the action (for future telemetry / routing).
+#[allow(dead_code)]
+pub enum ActionTriggerSource {
+    Keyboard,
+    SpeechMike,
+    Tray,
+    Cli,
+}
+
+/// Unified entry point for triggering recording actions from any source.
+///
+/// Delegates to `TranscriptionCoordinator` for transcribe intents and to
+/// `ACTION_MAP` for cancel, mirroring `shortcut::handler::handle_shortcut_event`.
+pub fn fire_action(
+    app: &AppHandle,
+    intent: ActionIntent,
+    pressed: bool,
+    _source: ActionTriggerSource,
+) {
+    use crate::transcription_coordinator::is_transcribe_binding;
+    use crate::TranscriptionCoordinator;
+
+    let binding_id = match intent {
+        ActionIntent::Transcribe => "transcribe",
+        ActionIntent::TranscribeWithPostProcess => "transcribe_with_post_process",
+        ActionIntent::Cancel => "cancel",
+    };
+
+    if is_transcribe_binding(binding_id) {
+        let push_to_talk = get_settings(app).push_to_talk;
+        if let Some(coordinator) = app.try_state::<TranscriptionCoordinator>() {
+            coordinator.send_input(binding_id, "speechmike", pressed, push_to_talk);
+        } else {
+            warn!("fire_action: TranscriptionCoordinator not initialized");
+        }
+        return;
+    }
+
+    // Cancel action
+    let Some(action) = ACTION_MAP.get(binding_id) else {
+        return;
+    };
+
+    if binding_id == "cancel" {
+        let audio_manager = app.state::<Arc<AudioRecordingManager>>();
+        let livestt_active = app
+            .try_state::<Arc<crate::livestt::session::LiveSttSessionManager>>()
+            .map(|m| m.is_active())
+            .unwrap_or(false);
+        if (audio_manager.is_recording() || livestt_active) && pressed {
+            action.start(app, binding_id, "speechmike");
+        }
+        return;
+    }
+
+    if pressed {
+        action.start(app, binding_id, "speechmike");
+    } else {
+        action.stop(app, binding_id, "speechmike");
+    }
+}
+
+// ── Shortcut Action Trait ─────────────────────────────────────────────────────
+
 // Shortcut Action Trait
 pub trait ShortcutAction: Send + Sync {
     fn start(&self, app: &AppHandle, binding_id: &str, shortcut_str: &str);
