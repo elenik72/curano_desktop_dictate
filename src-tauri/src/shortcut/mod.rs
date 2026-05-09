@@ -629,6 +629,16 @@ pub fn change_livestt_finalize_timeout_ms_setting(
 
 #[tauri::command]
 #[specta::specta]
+pub fn change_livestt_preroll_ms_setting(app: AppHandle, preroll_ms: u64) -> Result<(), String> {
+    settings::validate_livestt_preroll_ms(preroll_ms)?;
+    let mut settings = settings::get_settings(&app);
+    settings.livestt_preroll_ms = preroll_ms;
+    settings::write_settings(&app, settings);
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
 pub fn change_livestt_prompt_setting(app: AppHandle, prompt: Option<String>) -> Result<(), String> {
     let normalized = settings::normalize_livestt_prompt(prompt.as_deref())?;
     let mut settings = settings::get_settings(&app);

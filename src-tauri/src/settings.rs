@@ -467,6 +467,8 @@ pub struct AppSettings {
     pub livestt_consultation_id: Option<String>,
     #[serde(default = "default_livestt_finalize_timeout_ms")]
     pub livestt_finalize_timeout_ms: u64,
+    #[serde(default = "default_livestt_preroll_ms")]
+    pub livestt_preroll_ms: u64,
     #[serde(default)]
     pub livestt_prompt: Option<String>,
     #[serde(default)]
@@ -721,7 +723,12 @@ fn default_livestt_finalize_timeout_ms() -> u64 {
     15_000
 }
 
+fn default_livestt_preroll_ms() -> u64 {
+    500
+}
+
 pub const MAX_LIVESTT_FINALIZE_TIMEOUT_MS: u64 = 120_000;
+pub const MAX_LIVESTT_PREROLL_MS: u64 = 5_000;
 
 pub const MAX_LIVESTT_PROMPT_CHARS: usize = 10_000;
 
@@ -788,6 +795,17 @@ pub fn validate_livestt_finalize_timeout_ms(timeout_ms: u64) -> Result<(), Strin
         return Err(format!(
             "LiveSTT finalize timeout must be between 1 and {} milliseconds",
             MAX_LIVESTT_FINALIZE_TIMEOUT_MS
+        ));
+    }
+
+    Ok(())
+}
+
+pub fn validate_livestt_preroll_ms(preroll_ms: u64) -> Result<(), String> {
+    if preroll_ms > MAX_LIVESTT_PREROLL_MS {
+        return Err(format!(
+            "LiveSTT preroll must be between 0 and {} milliseconds",
+            MAX_LIVESTT_PREROLL_MS
         ));
     }
 
@@ -1025,6 +1043,7 @@ pub fn get_default_settings() -> AppSettings {
         livestt_audio_format: LiveSttAudioFormat::default(),
         livestt_consultation_id: None,
         livestt_finalize_timeout_ms: default_livestt_finalize_timeout_ms(),
+        livestt_preroll_ms: default_livestt_preroll_ms(),
         livestt_prompt: None,
         livestt_terms: Vec::new(),
         speechmike_auto_select: default_speechmike_auto_select(),
@@ -1187,6 +1206,7 @@ mod tests {
         assert_eq!(settings.livestt_audio_format, LiveSttAudioFormat::Pcm);
         assert_eq!(settings.livestt_consultation_id, None);
         assert_eq!(settings.livestt_finalize_timeout_ms, 15_000);
+        assert_eq!(settings.livestt_preroll_ms, 500);
         assert_eq!(settings.livestt_prompt, None);
         assert!(settings.livestt_terms.is_empty());
     }
@@ -1200,6 +1220,7 @@ mod tests {
         object.remove("livestt_audio_format");
         object.remove("livestt_consultation_id");
         object.remove("livestt_finalize_timeout_ms");
+        object.remove("livestt_preroll_ms");
         object.remove("livestt_prompt");
         object.remove("livestt_terms");
 
@@ -1213,6 +1234,7 @@ mod tests {
         assert_eq!(settings.livestt_audio_format, LiveSttAudioFormat::Pcm);
         assert_eq!(settings.livestt_consultation_id, None);
         assert_eq!(settings.livestt_finalize_timeout_ms, 15_000);
+        assert_eq!(settings.livestt_preroll_ms, 500);
         assert_eq!(settings.livestt_prompt, None);
         assert!(settings.livestt_terms.is_empty());
     }
@@ -1312,6 +1334,14 @@ mod tests {
         assert!(validate_livestt_finalize_timeout_ms(MAX_LIVESTT_FINALIZE_TIMEOUT_MS).is_ok());
         assert!(validate_livestt_finalize_timeout_ms(0).is_err());
         assert!(validate_livestt_finalize_timeout_ms(MAX_LIVESTT_FINALIZE_TIMEOUT_MS + 1).is_err());
+    }
+
+    #[test]
+    fn livestt_preroll_validation_bounds_value() {
+        assert!(validate_livestt_preroll_ms(0).is_ok());
+        assert!(validate_livestt_preroll_ms(500).is_ok());
+        assert!(validate_livestt_preroll_ms(MAX_LIVESTT_PREROLL_MS).is_ok());
+        assert!(validate_livestt_preroll_ms(MAX_LIVESTT_PREROLL_MS + 1).is_err());
     }
 
     #[test]

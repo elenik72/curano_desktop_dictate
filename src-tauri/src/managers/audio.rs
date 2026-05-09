@@ -422,8 +422,9 @@ impl AudioRecordingManager {
         let mut state = self.state.lock().unwrap();
 
         if let RecordingState::Idle = *state {
+            let in_on_demand_mode = matches!(*self.mode.lock().unwrap(), MicrophoneMode::OnDemand);
             // Ensure microphone is open in on-demand mode
-            if matches!(*self.mode.lock().unwrap(), MicrophoneMode::OnDemand) {
+            if in_on_demand_mode {
                 // Cancel any pending lazy close
                 self.close_generation.fetch_add(1, Ordering::SeqCst);
                 if let Err(e) = self.start_microphone_stream() {
@@ -433,14 +434,27 @@ impl AudioRecordingManager {
                 }
             }
 
+            // Preroll only makes sense for LiveSTT (chunk_sender present) and
+            // only when the mic was already open before this call (always-on
+            // mode). On-demand mode just opened the stream, so the ring is
+            // cold — pass 0 to skip the replay path entirely.
+            let preroll_samples = if chunk_sender.is_some() && !in_on_demand_mode {
+                let preroll_ms = get_settings(&self.app_handle).livestt_preroll_ms;
+                (preroll_ms as usize) * WHISPER_SAMPLE_RATE / 1000
+            } else {
+                0
+            };
+
             *self.recording_chunk_sender.lock().unwrap() = chunk_sender;
             if let Some(rec) = self.recorder.lock().unwrap().as_ref() {
-                if rec.start().is_ok() {
+                if rec.start(preroll_samples).is_ok() {
                     *self.is_recording.lock().unwrap() = true;
                     *state = RecordingState::Recording {
                         binding_id: binding_id.to_string(),
                     };
-                    debug!("Recording started for binding {binding_id}");
+                    debug!(
+                        "Recording started for binding {binding_id} (preroll_samples={preroll_samples})"
+                    );
                     return Ok(());
                 }
             }
