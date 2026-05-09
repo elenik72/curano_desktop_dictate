@@ -625,11 +625,11 @@
           "placeholder": "Optional",
           "error": "Consultation ID must be a positive integer or empty."
         },
-        "prompt": {
+        "text": {
           "title": "Prompt",
           "description": "Optional context (domain, names, glossary) that helps Soniox recognize unusual words. Up to 10000 characters. Sent at the start of each session.",
           "placeholder": "e.g. Cardiology consultation. Patient: John Doe.",
-          "error": "Prompt must be at most 10000 characters."
+          "error": "Text must be at most 10000 characters."
         },
         "terms": {
           "title": "Термини",
@@ -640,6 +640,21 @@
             "duplicate": "Терминът вече е добавен.",
             "tooLong": "Терминът трябва да е най-много 200 символа.",
             "tooMany": "Можете да добавите до 1000 термина."
+          }
+        },
+        "general": {
+          "title": "General context",
+          "description": "Structured key-value hints (domain, topic, doctor, etc.) for the transcription model. Sent with the init event of each session.",
+          "keyPlaceholder": "domain",
+          "valuePlaceholder": "Healthcare",
+          "addButton": "Add context field",
+          "removeAria": "Remove context field",
+          "errors": {
+            "tooMany": "You can add up to 50 context fields.",
+            "keyTooLong": "Key must be at most 200 characters.",
+            "valueTooLong": "Value must be at most 1000 characters.",
+            "partialRow": "Both key and value are required.",
+            "duplicateKey": "Key '{{key}}' is duplicated."
           }
         },
         "finalizeTimeout": {

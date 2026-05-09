@@ -625,11 +625,11 @@
           "placeholder": "Optional",
           "error": "Consultation ID must be a positive integer or empty."
         },
-        "prompt": {
+        "text": {
           "title": "Prompt",
           "description": "Optional context (domain, names, glossary) that helps Soniox recognize unusual words. Up to 10000 characters. Sent at the start of each session.",
           "placeholder": "e.g. Cardiology consultation. Patient: John Doe.",
-          "error": "Prompt must be at most 10000 characters."
+          "error": "Text must be at most 10000 characters."
         },
         "terms": {
           "title": "Терміни",
@@ -640,6 +640,21 @@
             "duplicate": "Термін уже додано.",
             "tooLong": "Термін має бути не довшим за 200 символів.",
             "tooMany": "Можна додати до 1000 термінів."
+          }
+        },
+        "general": {
+          "title": "Загальний контекст",
+          "description": "Структуровані підказки key/value (домен, тема, лікар тощо) для моделі транскрипції. Надсилається з init-подією кожної сесії.",
+          "keyPlaceholder": "domain",
+          "valuePlaceholder": "Healthcare",
+          "addButton": "Додати поле контексту",
+          "removeAria": "Видалити поле контексту",
+          "errors": {
+            "tooMany": "Можна додати до 50 полів контексту.",
+            "keyTooLong": "Ключ має бути не довшим за 200 символів.",
+            "valueTooLong": "Значення має бути не довшим за 1000 символів.",
+            "partialRow": "Заповніть і ключ, і значення.",
+            "duplicateKey": "Ключ '{{key}}' уже використовується."
           }
         },
         "finalizeTimeout": {

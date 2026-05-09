@@ -3,9 +3,12 @@ const LIVESTT_SERVER_URL_ERROR_KEY =
 
 export const MIN_FINALIZE_TIMEOUT_MS = 1;
 export const MAX_FINALIZE_TIMEOUT_MS = 120000;
-export const MAX_LIVESTT_PROMPT_CHARS = 10000;
+export const MAX_LIVESTT_TEXT_CHARS = 10000;
 export const MAX_LIVESTT_TERMS = 1000;
 export const MAX_LIVESTT_TERM_CHARS = 200;
+export const MAX_LIVESTT_GENERAL_ENTRIES = 50;
+export const MAX_LIVESTT_GENERAL_KEY_CHARS = 200;
+export const MAX_LIVESTT_GENERAL_VALUE_CHARS = 1000;
 
 export interface LiveSttServerUrlValidationResult {
   normalized: string;
@@ -77,14 +80,97 @@ export const parseConsultationIdInput = (value: string): string | null => {
   return String(parsed);
 };
 
-export const normalizeLiveSttPromptInput = (
+export const normalizeLiveSttTextInput = (
   value: string,
 ): { trimmed: string; isValid: boolean } => {
   const trimmed = value.trim();
-  if ([...trimmed].length > MAX_LIVESTT_PROMPT_CHARS) {
+  if ([...trimmed].length > MAX_LIVESTT_TEXT_CHARS) {
     return { trimmed, isValid: false };
   }
   return { trimmed, isValid: true };
+};
+
+export type GeneralEntry = { key: string; value: string };
+
+export type GeneralValidationError =
+  | "tooMany"
+  | "keyTooLong"
+  | "valueTooLong"
+  | "partialRow"
+  | "duplicateKey";
+
+export interface GeneralValidationResult {
+  entries: GeneralEntry[];
+  error: GeneralValidationError | null;
+  errorRowIndex: number | null;
+  errorKey: string | null;
+}
+
+export const normalizeLiveSttGeneralEntries = (
+  entries: readonly GeneralEntry[],
+): GeneralValidationResult => {
+  const result: GeneralEntry[] = [];
+  const seen = new Set<string>();
+
+  for (let i = 0; i < entries.length; i += 1) {
+    const raw = entries[i];
+    const key = raw.key.trim();
+    const value = raw.value.trim();
+
+    if (key === "" && value === "") {
+      continue;
+    }
+
+    if (key === "" || value === "") {
+      return {
+        entries: [],
+        error: "partialRow",
+        errorRowIndex: i,
+        errorKey: null,
+      };
+    }
+
+    if ([...key].length > MAX_LIVESTT_GENERAL_KEY_CHARS) {
+      return {
+        entries: [],
+        error: "keyTooLong",
+        errorRowIndex: i,
+        errorKey: null,
+      };
+    }
+
+    if ([...value].length > MAX_LIVESTT_GENERAL_VALUE_CHARS) {
+      return {
+        entries: [],
+        error: "valueTooLong",
+        errorRowIndex: i,
+        errorKey: null,
+      };
+    }
+
+    if (seen.has(key)) {
+      return {
+        entries: [],
+        error: "duplicateKey",
+        errorRowIndex: i,
+        errorKey: key,
+      };
+    }
+    seen.add(key);
+
+    result.push({ key, value });
+  }
+
+  if (result.length > MAX_LIVESTT_GENERAL_ENTRIES) {
+    return {
+      entries: [],
+      error: "tooMany",
+      errorRowIndex: null,
+      errorKey: null,
+    };
+  }
+
+  return { entries: result, error: null, errorRowIndex: null, errorKey: null };
 };
 
 export type AddTermResult =

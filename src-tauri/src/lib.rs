@@ -350,8 +350,9 @@ pub fn run(cli_args: CliArgs) {
             shortcut::change_livestt_consultation_id_setting,
             shortcut::change_livestt_finalize_timeout_ms_setting,
             shortcut::change_livestt_preroll_ms_setting,
-            shortcut::change_livestt_prompt_setting,
+            shortcut::change_livestt_text_setting,
             shortcut::change_livestt_terms_setting,
+            shortcut::change_livestt_general_setting,
             shortcut::change_overlay_position_setting,
             shortcut::change_debug_mode_setting,
             shortcut::change_word_correction_threshold_setting,
@@ -487,11 +488,11 @@ pub fn run(cli_args: CliArgs) {
                     Target::new(if let Some(data_dir) = portable::data_dir() {
                         TargetKind::Folder {
                             path: data_dir.join("logs"),
-                            file_name: Some("handy".into()),
+                            file_name: Some("curano_dictate".into()),
                         }
                     } else {
                         TargetKind::LogDir {
-                            file_name: Some("handy".into()),
+                            file_name: Some("curano_dictate".into()),
                         }
                     })
                     .filter(|metadata| {

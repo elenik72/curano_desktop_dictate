@@ -17,8 +17,9 @@ export const LiveSttSettingsSection: React.FC = () => {
   const serverUrl = getSetting("livestt_server_url") ?? "";
   const consultationId = getSetting("livestt_consultation_id") ?? "";
   const finalizeTimeoutMs = getSetting("livestt_finalize_timeout_ms") ?? 15000;
-  const prompt = getSetting("livestt_prompt") ?? "";
+  const text = getSetting("livestt_text") ?? "";
   const terms = getSetting("livestt_terms") ?? [];
+  const general = getSetting("livestt_general") ?? [];
 
   const [serverUrlInput, setServerUrlInput] = useState(serverUrl);
   const [serverUrlError, setServerUrlError] = useState<string | null>(null);
@@ -87,8 +88,9 @@ export const LiveSttSettingsSection: React.FC = () => {
       <LiveSttAdvancedSettings
         consultationId={consultationId}
         finalizeTimeoutMs={finalizeTimeoutMs}
-        prompt={prompt}
+        text={text}
         terms={terms}
+        general={general}
       />
     </SettingsGroup>
   );

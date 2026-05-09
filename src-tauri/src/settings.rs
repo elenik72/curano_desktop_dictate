@@ -470,9 +470,11 @@ pub struct AppSettings {
     #[serde(default = "default_livestt_preroll_ms")]
     pub livestt_preroll_ms: u64,
     #[serde(default)]
-    pub livestt_prompt: Option<String>,
+    pub livestt_text: Option<String>,
     #[serde(default)]
     pub livestt_terms: Vec<String>,
+    #[serde(default)]
+    pub livestt_general: Vec<crate::livestt::client::LiveSttGeneralEntry>,
     #[serde(default = "default_speechmike_auto_select")]
     pub speechmike_auto_select: bool,
     #[serde(default = "default_speechmike_button_mapping_enabled")]
@@ -498,7 +500,7 @@ fn default_model() -> String {
 }
 
 fn default_always_on_microphone() -> bool {
-    false
+    true
 }
 
 fn default_translate_to_english() -> bool {
@@ -730,10 +732,14 @@ fn default_livestt_preroll_ms() -> u64 {
 pub const MAX_LIVESTT_FINALIZE_TIMEOUT_MS: u64 = 120_000;
 pub const MAX_LIVESTT_PREROLL_MS: u64 = 5_000;
 
-pub const MAX_LIVESTT_PROMPT_CHARS: usize = 10_000;
+pub const MAX_LIVESTT_TEXT_CHARS: usize = 10_000;
 
 pub const MAX_LIVESTT_TERMS: usize = 1_000;
 pub const MAX_LIVESTT_TERM_CHARS: usize = 200;
+
+pub const MAX_LIVESTT_GENERAL_ENTRIES: usize = 50;
+pub const MAX_LIVESTT_GENERAL_KEY_CHARS: usize = 200;
+pub const MAX_LIVESTT_GENERAL_VALUE_CHARS: usize = 1_000;
 
 fn livestt_server_url_scheme_error() -> String {
     "LiveSTT server URL must use https, or http for localhost testing".to_string()
@@ -812,19 +818,73 @@ pub fn validate_livestt_preroll_ms(preroll_ms: u64) -> Result<(), String> {
     Ok(())
 }
 
-pub fn normalize_livestt_prompt(prompt: Option<&str>) -> Result<Option<String>, String> {
-    let Some(value) = prompt.map(str::trim).filter(|value| !value.is_empty()) else {
+pub fn normalize_livestt_text(text: Option<&str>) -> Result<Option<String>, String> {
+    let Some(value) = text.map(str::trim).filter(|value| !value.is_empty()) else {
         return Ok(None);
     };
 
-    if value.chars().count() > MAX_LIVESTT_PROMPT_CHARS {
+    if value.chars().count() > MAX_LIVESTT_TEXT_CHARS {
         return Err(format!(
-            "LiveSTT prompt must be at most {} characters",
-            MAX_LIVESTT_PROMPT_CHARS
+            "LiveSTT context text must be at most {} characters",
+            MAX_LIVESTT_TEXT_CHARS
         ));
     }
 
     Ok(Some(value.to_string()))
+}
+
+pub fn normalize_livestt_general(
+    entries: &[crate::livestt::client::LiveSttGeneralEntry],
+) -> Result<Vec<crate::livestt::client::LiveSttGeneralEntry>, String> {
+    use crate::livestt::client::LiveSttGeneralEntry;
+
+    let mut normalized: Vec<LiveSttGeneralEntry> = Vec::with_capacity(entries.len());
+    let mut seen_keys: std::collections::HashSet<String> = std::collections::HashSet::new();
+
+    for raw in entries {
+        let key = raw.key.trim();
+        let value = raw.value.trim();
+
+        if key.is_empty() && value.is_empty() {
+            continue;
+        }
+
+        if key.is_empty() || value.is_empty() {
+            return Err("LiveSTT general entry must have both key and value".to_string());
+        }
+
+        if key.chars().count() > MAX_LIVESTT_GENERAL_KEY_CHARS {
+            return Err(format!(
+                "LiveSTT general key must be at most {} characters",
+                MAX_LIVESTT_GENERAL_KEY_CHARS
+            ));
+        }
+
+        if value.chars().count() > MAX_LIVESTT_GENERAL_VALUE_CHARS {
+            return Err(format!(
+                "LiveSTT general value must be at most {} characters",
+                MAX_LIVESTT_GENERAL_VALUE_CHARS
+            ));
+        }
+
+        if !seen_keys.insert(key.to_string()) {
+            return Err(format!("LiveSTT general key '{}' is duplicated", key));
+        }
+
+        normalized.push(LiveSttGeneralEntry {
+            key: key.to_string(),
+            value: value.to_string(),
+        });
+    }
+
+    if normalized.len() > MAX_LIVESTT_GENERAL_ENTRIES {
+        return Err(format!(
+            "LiveSTT general entries must contain at most {} items",
+            MAX_LIVESTT_GENERAL_ENTRIES
+        ));
+    }
+
+    Ok(normalized)
 }
 
 pub fn normalize_livestt_terms(terms: &[String]) -> Result<Vec<String>, String> {
@@ -998,7 +1058,7 @@ pub fn get_default_settings() -> AppSettings {
         autostart_enabled: default_autostart_enabled(),
         update_checks_enabled: default_update_checks_enabled(),
         selected_model: "".to_string(),
-        always_on_microphone: false,
+        always_on_microphone: true,
         selected_microphone: None,
         clamshell_microphone: None,
         selected_output_device: None,
@@ -1044,8 +1104,9 @@ pub fn get_default_settings() -> AppSettings {
         livestt_consultation_id: None,
         livestt_finalize_timeout_ms: default_livestt_finalize_timeout_ms(),
         livestt_preroll_ms: default_livestt_preroll_ms(),
-        livestt_prompt: None,
+        livestt_text: None,
         livestt_terms: Vec::new(),
+        livestt_general: Vec::new(),
         speechmike_auto_select: default_speechmike_auto_select(),
         speechmike_button_mapping_enabled: default_speechmike_button_mapping_enabled(),
         speechmike_last_seen_name: None,
@@ -1207,8 +1268,9 @@ mod tests {
         assert_eq!(settings.livestt_consultation_id, None);
         assert_eq!(settings.livestt_finalize_timeout_ms, 15_000);
         assert_eq!(settings.livestt_preroll_ms, 500);
-        assert_eq!(settings.livestt_prompt, None);
+        assert_eq!(settings.livestt_text, None);
         assert!(settings.livestt_terms.is_empty());
+        assert!(settings.livestt_general.is_empty());
     }
 
     #[test]
@@ -1221,8 +1283,9 @@ mod tests {
         object.remove("livestt_consultation_id");
         object.remove("livestt_finalize_timeout_ms");
         object.remove("livestt_preroll_ms");
-        object.remove("livestt_prompt");
+        object.remove("livestt_text");
         object.remove("livestt_terms");
+        object.remove("livestt_general");
 
         let settings = serde_json::from_value::<AppSettings>(value).unwrap();
 
@@ -1235,8 +1298,9 @@ mod tests {
         assert_eq!(settings.livestt_consultation_id, None);
         assert_eq!(settings.livestt_finalize_timeout_ms, 15_000);
         assert_eq!(settings.livestt_preroll_ms, 500);
-        assert_eq!(settings.livestt_prompt, None);
+        assert_eq!(settings.livestt_text, None);
         assert!(settings.livestt_terms.is_empty());
+        assert!(settings.livestt_general.is_empty());
     }
 
     #[test]
@@ -1345,27 +1409,112 @@ mod tests {
     }
 
     #[test]
-    fn livestt_prompt_normalization_trims_and_treats_blank_as_none() {
-        assert_eq!(normalize_livestt_prompt(None).unwrap(), None);
-        assert_eq!(normalize_livestt_prompt(Some("")).unwrap(), None);
-        assert_eq!(normalize_livestt_prompt(Some("   \n\t ")).unwrap(), None);
+    fn livestt_text_normalization_trims_and_treats_blank_as_none() {
+        assert_eq!(normalize_livestt_text(None).unwrap(), None);
+        assert_eq!(normalize_livestt_text(Some("")).unwrap(), None);
+        assert_eq!(normalize_livestt_text(Some("   \n\t ")).unwrap(), None);
         assert_eq!(
-            normalize_livestt_prompt(Some("  hello world  ")).unwrap(),
+            normalize_livestt_text(Some("  hello world  ")).unwrap(),
             Some("hello world".to_string())
         );
     }
 
     #[test]
-    fn livestt_prompt_validation_rejects_oversized_input() {
-        let oversized = "a".repeat(MAX_LIVESTT_PROMPT_CHARS + 1);
-        assert!(normalize_livestt_prompt(Some(&oversized)).is_err());
+    fn livestt_text_validation_rejects_oversized_input() {
+        let oversized = "a".repeat(MAX_LIVESTT_TEXT_CHARS + 1);
+        assert!(normalize_livestt_text(Some(&oversized)).is_err());
 
-        let at_limit = "a".repeat(MAX_LIVESTT_PROMPT_CHARS);
-        let result = normalize_livestt_prompt(Some(&at_limit)).unwrap();
+        let at_limit = "a".repeat(MAX_LIVESTT_TEXT_CHARS);
+        let result = normalize_livestt_text(Some(&at_limit)).unwrap();
         assert_eq!(
             result.as_deref().map(str::len),
-            Some(MAX_LIVESTT_PROMPT_CHARS)
+            Some(MAX_LIVESTT_TEXT_CHARS)
         );
+    }
+
+    #[test]
+    fn livestt_general_normalization_trims_and_drops_fully_empty_rows() {
+        use crate::livestt::client::LiveSttGeneralEntry;
+
+        let input = vec![
+            LiveSttGeneralEntry {
+                key: "  domain  ".to_string(),
+                value: "  Healthcare  ".to_string(),
+            },
+            LiveSttGeneralEntry {
+                key: "  ".to_string(),
+                value: "  ".to_string(),
+            },
+            LiveSttGeneralEntry {
+                key: "topic".to_string(),
+                value: "Diabetes".to_string(),
+            },
+        ];
+
+        let result = normalize_livestt_general(&input).unwrap();
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0].key, "domain");
+        assert_eq!(result[0].value, "Healthcare");
+        assert_eq!(result[1].key, "topic");
+    }
+
+    #[test]
+    fn livestt_general_normalization_rejects_partial_rows() {
+        use crate::livestt::client::LiveSttGeneralEntry;
+
+        let only_key = vec![LiveSttGeneralEntry {
+            key: "domain".to_string(),
+            value: "  ".to_string(),
+        }];
+        assert!(normalize_livestt_general(&only_key).is_err());
+
+        let only_value = vec![LiveSttGeneralEntry {
+            key: " ".to_string(),
+            value: "Healthcare".to_string(),
+        }];
+        assert!(normalize_livestt_general(&only_value).is_err());
+    }
+
+    #[test]
+    fn livestt_general_normalization_rejects_duplicate_keys() {
+        use crate::livestt::client::LiveSttGeneralEntry;
+
+        let input = vec![
+            LiveSttGeneralEntry {
+                key: "domain".to_string(),
+                value: "Healthcare".to_string(),
+            },
+            LiveSttGeneralEntry {
+                key: "domain".to_string(),
+                value: "Finance".to_string(),
+            },
+        ];
+        assert!(normalize_livestt_general(&input).is_err());
+    }
+
+    #[test]
+    fn livestt_general_normalization_rejects_oversized_strings_and_overflow() {
+        use crate::livestt::client::LiveSttGeneralEntry;
+
+        let oversized_key = vec![LiveSttGeneralEntry {
+            key: "a".repeat(MAX_LIVESTT_GENERAL_KEY_CHARS + 1),
+            value: "v".to_string(),
+        }];
+        assert!(normalize_livestt_general(&oversized_key).is_err());
+
+        let oversized_value = vec![LiveSttGeneralEntry {
+            key: "k".to_string(),
+            value: "a".repeat(MAX_LIVESTT_GENERAL_VALUE_CHARS + 1),
+        }];
+        assert!(normalize_livestt_general(&oversized_value).is_err());
+
+        let too_many: Vec<LiveSttGeneralEntry> = (0..=MAX_LIVESTT_GENERAL_ENTRIES)
+            .map(|i| LiveSttGeneralEntry {
+                key: format!("k{}", i),
+                value: "v".to_string(),
+            })
+            .collect();
+        assert!(normalize_livestt_general(&too_many).is_err());
     }
 
     #[test]

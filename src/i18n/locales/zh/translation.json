@@ -625,11 +625,11 @@
           "placeholder": "Optional",
           "error": "Consultation ID must be a positive integer or empty."
         },
-        "prompt": {
+        "text": {
           "title": "Prompt",
           "description": "Optional context (domain, names, glossary) that helps Soniox recognize unusual words. Up to 10000 characters. Sent at the start of each session.",
           "placeholder": "e.g. Cardiology consultation. Patient: John Doe.",
-          "error": "Prompt must be at most 10000 characters."
+          "error": "Text must be at most 10000 characters."
         },
         "terms": {
           "title": "术语",
@@ -640,6 +640,21 @@
             "duplicate": "术语已添加。",
             "tooLong": "术语最多 200 个字符。",
             "tooMany": "最多可添加 1000 个术语。"
+          }
+        },
+        "general": {
+          "title": "通用上下文",
+          "description": "用于转录模型的结构化键值提示（领域、主题、医生等）。在每次会话的init事件中发送。",
+          "keyPlaceholder": "domain",
+          "valuePlaceholder": "Healthcare",
+          "addButton": "添加上下文字段",
+          "removeAria": "移除上下文字段",
+          "errors": {
+            "tooMany": "最多可添加50个上下文字段。",
+            "keyTooLong": "键最多200个字符。",
+            "valueTooLong": "值最多1000个字符。",
+            "partialRow": "需要同时填写键和值。",
+            "duplicateKey": "键 '{{key}}' 重复。"
           }
         },
         "finalizeTimeout": {
