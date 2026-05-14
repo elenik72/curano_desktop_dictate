@@ -625,11 +625,11 @@
           "placeholder": "Optional",
           "error": "Consultation ID must be a positive integer or empty."
         },
-        "prompt": {
+        "text": {
           "title": "Prompt",
           "description": "Optional context (domain, names, glossary) that helps Soniox recognize unusual words. Up to 10000 characters. Sent at the start of each session.",
           "placeholder": "e.g. Cardiology consultation. Patient: John Doe.",
-          "error": "Prompt must be at most 10000 characters."
+          "error": "Text must be at most 10000 characters."
         },
         "terms": {
           "title": "Begriffe",
@@ -640,6 +640,21 @@
             "duplicate": "Begriff wurde bereits hinzugefügt.",
             "tooLong": "Begriff darf höchstens 200 Zeichen lang sein.",
             "tooMany": "Sie können bis zu 1000 Begriffe hinzufügen."
+          }
+        },
+        "general": {
+          "title": "Allgemeiner Kontext",
+          "description": "Strukturierte Schlüssel-Wert-Hinweise (Domäne, Thema, Arzt usw.) für das Transkriptionsmodell. Wird mit dem Init-Event jeder Sitzung gesendet.",
+          "keyPlaceholder": "domain",
+          "valuePlaceholder": "Healthcare",
+          "addButton": "Kontextfeld hinzufügen",
+          "removeAria": "Kontextfeld entfernen",
+          "errors": {
+            "tooMany": "Sie können bis zu 50 Kontextfelder hinzufügen.",
+            "keyTooLong": "Schlüssel darf höchstens 200 Zeichen haben.",
+            "valueTooLong": "Wert darf höchstens 1000 Zeichen haben.",
+            "partialRow": "Schlüssel und Wert sind erforderlich.",
+            "duplicateKey": "Schlüssel '{{key}}' ist doppelt vorhanden."
           }
         },
         "finalizeTimeout": {

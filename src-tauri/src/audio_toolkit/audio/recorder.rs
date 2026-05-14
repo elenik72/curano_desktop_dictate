@@ -1,4 +1,5 @@
 use std::{
+    collections::VecDeque,
     io::Error,
     sync::{
         atomic::{AtomicBool, Ordering},
@@ -21,7 +22,12 @@ use crate::audio_toolkit::{
 use crate::livestt::audio::PcmChunkAccumulator;
 
 enum Cmd {
-    Start,
+    Start {
+        /// Number of resampled (16 kHz mono) samples retained in the rolling
+        /// preroll ring buffer that should be replayed at session start. Pass
+        /// 0 to disable preroll.
+        preroll_samples: usize,
+    },
     Stop {
         reply_tx: mpsc::Sender<Vec<f32>>,
         flush_remainder: bool,
@@ -218,9 +224,9 @@ impl AudioRecorder {
         }
     }
 
-    pub fn start(&self) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn start(&self, preroll_samples: usize) -> Result<(), Box<dyn std::error::Error>> {
         if let Some(tx) = &self.cmd_tx {
-            tx.send(Cmd::Start)?;
+            tx.send(Cmd::Start { preroll_samples })?;
         }
         Ok(())
     }
@@ -496,6 +502,49 @@ mod tests {
         assert!(emitted.lock().unwrap().is_empty());
         assert_eq!(chunk_accumulator.flush(), None);
     }
+
+    #[test]
+    fn preroll_ring_keeps_only_last_cap_samples() {
+        use std::collections::VecDeque;
+        let mut ring = VecDeque::new();
+        super::fill_preroll_ring(&mut ring, &[1.0, 2.0, 3.0, 4.0], 3);
+        assert_eq!(
+            ring.iter().copied().collect::<Vec<_>>(),
+            vec![2.0, 3.0, 4.0]
+        );
+
+        super::fill_preroll_ring(&mut ring, &[5.0, 6.0], 3);
+        assert_eq!(
+            ring.iter().copied().collect::<Vec<_>>(),
+            vec![4.0, 5.0, 6.0]
+        );
+    }
+
+    #[test]
+    fn preroll_ring_zero_cap_keeps_ring_empty() {
+        use std::collections::VecDeque;
+        let mut ring = VecDeque::from(vec![1.0, 2.0]);
+        super::fill_preroll_ring(&mut ring, &[3.0, 4.0], 0);
+        assert!(ring.is_empty());
+    }
+
+    #[test]
+    fn preroll_ring_drain_returns_in_order_and_empties_ring() {
+        use std::collections::VecDeque;
+        let mut ring = VecDeque::from(vec![1.0, 2.0, 3.0, 4.0, 5.0]);
+        let drained = super::drain_preroll_ring(&mut ring, 3);
+        assert_eq!(drained, vec![3.0, 4.0, 5.0]);
+        assert!(ring.is_empty());
+    }
+
+    #[test]
+    fn preroll_ring_drain_zero_cap_returns_empty() {
+        use std::collections::VecDeque;
+        let mut ring = VecDeque::from(vec![1.0, 2.0]);
+        let drained = super::drain_preroll_ring(&mut ring, 0);
+        assert!(drained.is_empty());
+        assert!(ring.is_empty());
+    }
 }
 
 fn run_consumer(
@@ -517,6 +566,14 @@ fn run_consumer(
     let mut recording = false;
     let mut chunk_accumulator = PcmChunkAccumulator::new();
     let chunk_emitter = RecordingChunkEmitter::new(recording_chunk_cb);
+
+    // Rolling preroll ring of resampled 16 kHz mono samples. Filled while the
+    // mic is open but not recording (always-on mode), drained at Cmd::Start so
+    // the session captures speech that began before the hotkey was pressed and
+    // the cpal callback latency between Cmd::Start delivery and the next
+    // sample chunk does not eat the first words.
+    let mut preroll_ring: VecDeque<f32> = VecDeque::new();
+    let mut preroll_cap: usize = 0;
 
     // ---------- spectrum visualisation setup ---------------------------- //
     const BUCKETS: usize = 16;
@@ -551,21 +608,47 @@ fn run_consumer(
         // LiveSTT receives raw resampled 16 kHz mono frames before local VAD
         // filtering. Local transcription continues to use VAD-filtered samples.
         frame_resampler.push(&raw, &mut |frame: &[f32]| {
-            emit_livestt_recording_frame(frame, recording, &mut chunk_accumulator, &chunk_emitter);
-            handle_local_recording_frame(frame, recording, &vad, &mut processed_samples)
+            if recording {
+                emit_livestt_recording_frame(frame, true, &mut chunk_accumulator, &chunk_emitter);
+                handle_local_recording_frame(frame, true, &vad, &mut processed_samples);
+            } else if preroll_cap > 0 {
+                fill_preroll_ring(&mut preroll_ring, frame, preroll_cap);
+            }
         });
 
         // non-blocking check for a command
         while let Ok(cmd) = cmd_rx.try_recv() {
             match cmd {
-                Cmd::Start => {
+                Cmd::Start { preroll_samples } => {
                     stop_flag.store(false, Ordering::Relaxed);
                     processed_samples.clear();
                     chunk_accumulator.reset();
-                    recording = true;
                     visualizer.reset();
                     if let Some(v) = &vad {
                         v.lock().unwrap().reset();
+                    }
+
+                    // Drain the rolling preroll captured while the mic was
+                    // open but the session was not yet recording. Replay
+                    // through the same emitters so the WS writer and local
+                    // pipeline see those samples first, in order.
+                    let preroll = drain_preroll_ring(&mut preroll_ring, preroll_samples);
+                    preroll_cap = preroll_samples;
+                    recording = true;
+
+                    if !preroll.is_empty() {
+                        log::debug!(
+                            "LiveSTT preroll: replaying {} resampled samples (~{} ms)",
+                            preroll.len(),
+                            preroll.len() * 1000 / constants::WHISPER_SAMPLE_RATE as usize
+                        );
+                        emit_livestt_recording_frame(
+                            &preroll,
+                            true,
+                            &mut chunk_accumulator,
+                            &chunk_emitter,
+                        );
+                        handle_local_recording_frame(&preroll, true, &vad, &mut processed_samples);
                     }
                 }
                 Cmd::Stop {
@@ -574,6 +657,10 @@ fn run_consumer(
                 } => {
                     recording = false;
                     stop_flag.store(true, Ordering::Relaxed);
+                    // Drop any preroll samples from the just-finished session;
+                    // `preroll_cap` is overwritten on the next Cmd::Start so
+                    // we leave it as-is.
+                    preroll_ring.clear();
 
                     // Drain all remaining audio until the producer confirms end-of-stream.
                     // The cpal callback sees the stop flag, sends EndOfStream, and goes
@@ -629,6 +716,7 @@ fn run_consumer(
                 Cmd::Shutdown => {
                     stop_flag.store(true, Ordering::Relaxed);
                     chunk_accumulator.reset();
+                    preroll_ring.clear();
                     return;
                 }
             }
@@ -648,6 +736,34 @@ fn emit_livestt_recording_frame(
 
     let chunks = chunk_accumulator.push_samples(frame);
     chunk_emitter.emit(chunks);
+}
+
+/// Append a frame of resampled mono samples to the rolling preroll ring,
+/// dropping oldest samples once the ring exceeds `cap`.
+fn fill_preroll_ring(ring: &mut VecDeque<f32>, frame: &[f32], cap: usize) {
+    if cap == 0 {
+        ring.clear();
+        return;
+    }
+    ring.extend(frame.iter().copied());
+    if ring.len() > cap {
+        let excess = ring.len() - cap;
+        ring.drain(..excess);
+    }
+}
+
+/// Empty the preroll ring and return its contents trimmed to at most
+/// `cap` samples (oldest dropped). Returns an empty `Vec` when `cap` is 0.
+fn drain_preroll_ring(ring: &mut VecDeque<f32>, cap: usize) -> Vec<f32> {
+    if cap == 0 {
+        ring.clear();
+        return Vec::new();
+    }
+    if ring.len() > cap {
+        let excess = ring.len() - cap;
+        ring.drain(..excess);
+    }
+    ring.drain(..).collect()
 }
 
 fn handle_local_recording_frame(

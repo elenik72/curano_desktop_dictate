@@ -625,11 +625,11 @@
           "placeholder": "Optional",
           "error": "Consultation ID must be a positive integer or empty."
         },
-        "prompt": {
+        "text": {
           "title": "Prompt",
           "description": "Optional context (domain, names, glossary) that helps Soniox recognize unusual words. Up to 10000 characters. Sent at the start of each session.",
           "placeholder": "e.g. Cardiology consultation. Patient: John Doe.",
-          "error": "Prompt must be at most 10000 characters."
+          "error": "Text must be at most 10000 characters."
         },
         "terms": {
           "title": "Termes",
@@ -640,6 +640,21 @@
             "duplicate": "Terme déjà ajouté.",
             "tooLong": "Le terme doit comporter au maximum 200 caractères.",
             "tooMany": "Vous pouvez ajouter jusqu'à 1000 termes."
+          }
+        },
+        "general": {
+          "title": "Contexte général",
+          "description": "Indices structurés clé/valeur (domaine, sujet, médecin, etc.) pour le modèle de transcription. Envoyé avec l'événement init de chaque session.",
+          "keyPlaceholder": "domain",
+          "valuePlaceholder": "Healthcare",
+          "addButton": "Ajouter un champ de contexte",
+          "removeAria": "Supprimer le champ de contexte",
+          "errors": {
+            "tooMany": "Vous pouvez ajouter jusqu'à 50 champs de contexte.",
+            "keyTooLong": "La clé doit comporter au plus 200 caractères.",
+            "valueTooLong": "La valeur doit comporter au plus 1000 caractères.",
+            "partialRow": "La clé et la valeur sont requises.",
+            "duplicateKey": "La clé '{{key}}' est dupliquée."
           }
         },
         "finalizeTimeout": {

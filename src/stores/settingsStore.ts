@@ -4,6 +4,7 @@ import { listen } from "@tauri-apps/api/event";
 import type {
   AppSettings as Settings,
   AudioDevice,
+  LiveSttGeneralEntry,
   WhisperAcceleratorSetting,
   OrtAcceleratorSetting,
   TranscriptionBackend,
@@ -164,10 +165,14 @@ const settingUpdaters: {
     commands.changeLivesttConsultationIdSetting(value as string | null),
   livestt_finalize_timeout_ms: (value) =>
     commands.changeLivesttFinalizeTimeoutMsSetting(value as number),
-  livestt_prompt: (value) =>
-    commands.changeLivesttPromptSetting(value as string | null),
+  livestt_text: (value) =>
+    commands.changeLivesttTextSetting(value as string | null),
   livestt_terms: (value) =>
     commands.changeLivesttTermsSetting((value as string[]) ?? []),
+  livestt_general: (value) =>
+    commands.changeLivesttGeneralSetting(
+      (value as LiveSttGeneralEntry[]) ?? [],
+    ),
 };
 
 export const useSettingsStore = create<SettingsStore>()(

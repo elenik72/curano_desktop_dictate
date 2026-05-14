@@ -625,11 +625,11 @@
           "placeholder": "Optional",
           "error": "Consultation ID must be a positive integer or empty."
         },
-        "prompt": {
+        "text": {
           "title": "Prompt",
           "description": "Optional context (domain, names, glossary) that helps Soniox recognize unusual words. Up to 10000 characters. Sent at the start of each session.",
           "placeholder": "e.g. Cardiology consultation. Patient: John Doe.",
-          "error": "Prompt must be at most 10000 characters."
+          "error": "Text must be at most 10000 characters."
         },
         "terms": {
           "title": "用語",
@@ -640,6 +640,21 @@
             "duplicate": "用語はすでに追加されています。",
             "tooLong": "用語は 200 文字以内で入力してください。",
             "tooMany": "用語は最大 1000 件まで追加できます。"
+          }
+        },
+        "general": {
+          "title": "一般コンテキスト",
+          "description": "転写モデル向けの構造化キー/値ヒント（ドメイン、トピック、医師など）。各セッションのinitイベントで送信されます。",
+          "keyPlaceholder": "domain",
+          "valuePlaceholder": "Healthcare",
+          "addButton": "コンテキストフィールドを追加",
+          "removeAria": "コンテキストフィールドを削除",
+          "errors": {
+            "tooMany": "コンテキストフィールドは50個まで追加できます。",
+            "keyTooLong": "キーは200文字以内にしてください。",
+            "valueTooLong": "値は1000文字以内にしてください。",
+            "partialRow": "キーと値の両方を入力してください。",
+            "duplicateKey": "キー '{{key}}' が重複しています。"
           }
         },
         "finalizeTimeout": {

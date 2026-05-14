@@ -12,7 +12,8 @@ use crate::settings;
 use super::audio::f32_samples_to_pcm_i16_le;
 use super::auth::{ensure_fresh_livestt_access_token, force_refresh_livestt_access_token};
 use super::client::{
-    contains_explicit_auth_failure_marker, LiveSttClient, LiveSttConfig, LiveSttResult,
+    contains_explicit_auth_failure_marker, LiveSttClient, LiveSttConfig, LiveSttGeneralEntry,
+    LiveSttResult,
 };
 use super::events::{
     emit_livestt_event, LiveSttEvent, LIVESTT_ERROR_AUDIO_QUEUE_OVERFLOW,
@@ -121,8 +122,9 @@ struct LiveSttSessionContext {
     app_handle: AppHandle,
     server_url: String,
     consultation_id: Option<i64>,
-    prompt: Option<String>,
+    text: Option<String>,
     terms: Vec<String>,
+    general: Vec<LiveSttGeneralEntry>,
     event_tx: mpsc::Sender<LiveSttEvent>,
     client: Mutex<Arc<LiveSttClient>>,
     replay_buffer: Mutex<LiveSttReplayBuffer>,
@@ -130,12 +132,14 @@ struct LiveSttSessionContext {
 }
 
 impl LiveSttSessionContext {
+    #[allow(clippy::too_many_arguments)]
     fn new(
         app_handle: AppHandle,
         server_url: String,
         consultation_id: Option<i64>,
-        prompt: Option<String>,
+        text: Option<String>,
         terms: Vec<String>,
+        general: Vec<LiveSttGeneralEntry>,
         event_tx: mpsc::Sender<LiveSttEvent>,
         client: Arc<LiveSttClient>,
     ) -> Self {
@@ -143,8 +147,9 @@ impl LiveSttSessionContext {
             app_handle,
             server_url,
             consultation_id,
-            prompt,
+            text,
             terms,
+            general,
             event_tx,
             client: Mutex::new(client),
             replay_buffer: Mutex::new(LiveSttReplayBuffer::default()),
@@ -277,8 +282,9 @@ impl LiveSttSessionManager {
             settings::validate_livestt_server_url_required(&app_settings.livestt_server_url)?;
         let consultation_id =
             parse_consultation_id(app_settings.livestt_consultation_id.as_deref())?;
-        let prompt = settings::normalize_livestt_prompt(app_settings.livestt_prompt.as_deref())?;
+        let text = settings::normalize_livestt_text(app_settings.livestt_text.as_deref())?;
         let terms = settings::normalize_livestt_terms(&app_settings.livestt_terms)?;
+        let general = settings::normalize_livestt_general(&app_settings.livestt_general)?;
 
         let (event_tx, event_rx) = mpsc::channel::<LiveSttEvent>(LIVESTT_EVENT_QUEUE_CAPACITY);
 
@@ -286,8 +292,9 @@ impl LiveSttSessionManager {
             &app_handle,
             server_url.clone(),
             consultation_id,
-            prompt.clone(),
+            text.clone(),
             terms.clone(),
+            general.clone(),
             event_tx.clone(),
         )
         .await?;
@@ -296,8 +303,9 @@ impl LiveSttSessionManager {
             app_handle,
             server_url,
             consultation_id,
-            prompt,
+            text,
             terms,
+            general,
             event_tx,
             client,
         ));
@@ -477,20 +485,23 @@ fn spawn_livestt_event_bridge(app_handle: AppHandle, mut event_rx: mpsc::Receive
     });
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn connect_initial_livestt_client(
     app_handle: &AppHandle,
     server_url: String,
     consultation_id: Option<i64>,
-    prompt: Option<String>,
+    text: Option<String>,
     terms: Vec<String>,
+    general: Vec<LiveSttGeneralEntry>,
     event_tx: mpsc::Sender<LiveSttEvent>,
 ) -> Result<Arc<LiveSttClient>, String> {
     let token = ensure_fresh_livestt_access_token(app_handle).await?;
     match connect_livestt_client(
         server_url.clone(),
         consultation_id,
-        prompt.clone(),
+        text.clone(),
         terms.clone(),
+        general.clone(),
         token,
         event_tx.clone(),
     )
@@ -502,18 +513,28 @@ async fn connect_initial_livestt_client(
         {
             log::warn!("LiveSTT WebSocket auth failed; attempting token refresh once");
             let token = force_refresh_livestt_access_token(app_handle).await?;
-            connect_livestt_client(server_url, consultation_id, prompt, terms, token, event_tx)
-                .await
+            connect_livestt_client(
+                server_url,
+                consultation_id,
+                text,
+                terms,
+                general,
+                token,
+                event_tx,
+            )
+            .await
         }
         Err(error) => Err(error),
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn connect_livestt_client(
     server_url: String,
     consultation_id: Option<i64>,
-    prompt: Option<String>,
+    text: Option<String>,
     terms: Vec<String>,
+    general: Vec<LiveSttGeneralEntry>,
     access_token: String,
     event_tx: mpsc::Sender<LiveSttEvent>,
 ) -> Result<Arc<LiveSttClient>, String> {
@@ -521,8 +542,9 @@ async fn connect_livestt_client(
         server_url,
         access_token,
         consultation_id,
-        prompt,
+        text,
         terms,
+        general,
     };
 
     tokio::time::timeout(
@@ -673,8 +695,9 @@ async fn reconnect_with_refresh_and_replay(
     let client = connect_livestt_client(
         context.server_url.clone(),
         context.consultation_id,
-        context.prompt.clone(),
+        context.text.clone(),
         context.terms.clone(),
+        context.general.clone(),
         access_token,
         context.event_tx.clone(),
     )

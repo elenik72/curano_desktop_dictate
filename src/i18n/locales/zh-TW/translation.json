@@ -625,11 +625,11 @@
           "placeholder": "Optional",
           "error": "Consultation ID must be a positive integer or empty."
         },
-        "prompt": {
+        "text": {
           "title": "Prompt",
           "description": "Optional context (domain, names, glossary) that helps Soniox recognize unusual words. Up to 10000 characters. Sent at the start of each session.",
           "placeholder": "e.g. Cardiology consultation. Patient: John Doe.",
-          "error": "Prompt must be at most 10000 characters."
+          "error": "Text must be at most 10000 characters."
         },
         "terms": {
           "title": "詞彙",
@@ -640,6 +640,21 @@
             "duplicate": "詞彙已新增。",
             "tooLong": "詞彙最多 200 個字元。",
             "tooMany": "最多可新增 1000 個詞彙。"
+          }
+        },
+        "general": {
+          "title": "一般情境",
+          "description": "用於轉錄模型的結構化鍵值提示（領域、主題、醫師等）。在每次工作階段的 init 事件中傳送。",
+          "keyPlaceholder": "domain",
+          "valuePlaceholder": "Healthcare",
+          "addButton": "新增情境欄位",
+          "removeAria": "移除情境欄位",
+          "errors": {
+            "tooMany": "最多可新增 50 個情境欄位。",
+            "keyTooLong": "金鑰長度上限為 200 個字元。",
+            "valueTooLong": "值長度上限為 1000 個字元。",
+            "partialRow": "需要同時填寫金鑰與值。",
+            "duplicateKey": "金鑰「{{key}}」重複。"
           }
         },
         "finalizeTimeout": {

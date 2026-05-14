@@ -203,9 +203,9 @@
         "disconnected": "Not connected",
         "notConnected": "Not connected",
         "unknownDevice": "Philips SpeechMike",
-        "blockedTitle": "Button channel is blocked",
-        "blockedBy": "Close the following application(s) and reconnect: {{processes}}",
-        "blockedUnknown": "Another application is holding the HID channel. Close it and reconnect the device.",
+        "blockedTitle": "Hardware buttons unavailable",
+        "blockedBy": "Microphone is still available for recording. To restore hardware buttons, close: {{processes}}",
+        "blockedUnknown": "Another application is holding the HID button channel. Microphone is still available for recording. Close the blocking application to restore hardware buttons.",
         "autoSelect": "Auto-select as microphone",
         "autoSelectDescription": "Automatically set SpeechMike as the active microphone when connected. Disable to keep your current microphone selection.",
         "buttonMapping": "Use device buttons for recording",
@@ -267,11 +267,11 @@
           "placeholder": "Optional",
           "error": "Consultation ID must be a positive integer or empty."
         },
-        "prompt": {
-          "title": "Prompt",
+        "text": {
+          "title": "Text",
           "description": "Optional context (domain, names, glossary) that helps Soniox recognize unusual words. Up to 10000 characters. Sent at the start of each session.",
           "placeholder": "e.g. Cardiology consultation. Patient: John Doe.",
-          "error": "Prompt must be at most 10000 characters."
+          "error": "Text must be at most 10000 characters."
         },
         "terms": {
           "title": "Terms",
@@ -282,6 +282,21 @@
             "duplicate": "Term already added.",
             "tooLong": "Term must be at most 200 characters.",
             "tooMany": "You can add up to 1000 terms."
+          }
+        },
+        "general": {
+          "title": "General context",
+          "description": "Structured key-value hints (domain, topic, doctor, etc.) for the transcription model. Sent with the init event of each session.",
+          "keyPlaceholder": "domain",
+          "valuePlaceholder": "Healthcare",
+          "addButton": "Add context field",
+          "removeAria": "Remove context field",
+          "errors": {
+            "tooMany": "You can add up to 50 context fields.",
+            "keyTooLong": "Key must be at most 200 characters.",
+            "valueTooLong": "Value must be at most 1000 characters.",
+            "partialRow": "Both key and value are required.",
+            "duplicateKey": "Key '{{key}}' is duplicated."
           }
         },
         "finalizeTimeout": {

@@ -156,14 +156,19 @@ export const SpeechMikeSettings: React.FC = () => {
           type="button"
           role="switch"
           aria-checked={status.buttons_enabled}
+          disabled={status.blocked_by_other_app}
           onClick={handleButtonMappingToggle}
           className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
-            status.buttons_enabled ? "bg-blue-600" : "bg-slate-200"
-          }`}
+            status.buttons_enabled && !status.blocked_by_other_app
+              ? "bg-blue-600"
+              : "bg-slate-200"
+          } ${status.blocked_by_other_app ? "opacity-50 cursor-not-allowed" : ""}`}
         >
           <span
             className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
-              status.buttons_enabled ? "translate-x-6" : "translate-x-1"
+              status.buttons_enabled && !status.blocked_by_other_app
+                ? "translate-x-6"
+                : "translate-x-1"
             }`}
           />
         </button>
