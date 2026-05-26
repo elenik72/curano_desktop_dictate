@@ -267,6 +267,7 @@ pub fn build_websocket_url(config: &LiveSttConfig) -> Result<Url, String> {
         let mut pairs = url.query_pairs_mut();
         pairs.append_pair("token", &config.access_token);
         pairs.append_pair("audio_format", "pcm");
+        pairs.append_pair("dictation", "true");
 
         if let Some(consultation_id) = config.consultation_id {
             pairs.append_pair("consultation_id", &consultation_id.to_string());
@@ -592,6 +593,13 @@ mod tests {
         let url = build_websocket_url(&test_config()).unwrap();
 
         assert!(url.query().unwrap().contains("audio_format=pcm"));
+    }
+
+    #[test]
+    fn livestt_url_builder_includes_dictation_flag() {
+        let url = build_websocket_url(&test_config()).unwrap();
+
+        assert!(url.query().unwrap().contains("dictation=true"));
     }
 
     #[test]
