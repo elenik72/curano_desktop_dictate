@@ -113,7 +113,21 @@ pub fn apply_custom_words(text: &str, custom_words: &[String], threshold: f64) -
         .map(|w| w.replace(' ', ""))
         .collect();
 
-    let words: Vec<&str> = text.split_whitespace().collect();
+    text.split('\n')
+        .map(|line| {
+            apply_custom_words_to_line(line, custom_words, &custom_words_nospace, threshold)
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn apply_custom_words_to_line(
+    line: &str,
+    custom_words: &[String],
+    custom_words_nospace: &[String],
+    threshold: f64,
+) -> String {
+    let words: Vec<&str> = line.split_whitespace().collect();
     let mut result = Vec::new();
     let mut i = 0;
 
@@ -229,11 +243,18 @@ fn get_filler_words_for_language(lang: &str) -> &'static [&'static str] {
     }
 }
 
-static MULTI_SPACE_PATTERN: Lazy<Regex> = Lazy::new(|| Regex::new(r"\s{2,}").unwrap());
+static MULTI_SPACE_PATTERN: Lazy<Regex> = Lazy::new(|| Regex::new(r"[^\S\n]{2,}").unwrap());
 
 /// Collapses repeated words (3+ repetitions) to a single instance.
 /// E.g., "wh wh wh wh" -> "wh", "I I I I" -> "I"
 fn collapse_stutters(text: &str) -> String {
+    text.split('\n')
+        .map(collapse_stutters_in_line)
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn collapse_stutters_in_line(text: &str) -> String {
     let words: Vec<&str> = text.split_whitespace().collect();
     if words.is_empty() {
         return text.to_string();
@@ -340,6 +361,14 @@ mod tests {
     }
 
     #[test]
+    fn test_apply_custom_words_preserves_newlines() {
+        let text = "helo\nwrold";
+        let custom_words = vec!["hello".to_string(), "world".to_string()];
+        let result = apply_custom_words(text, &custom_words, 0.5);
+        assert_eq!(result, "hello\nworld");
+    }
+
+    #[test]
     fn test_preserve_case_pattern() {
         assert_eq!(preserve_case_pattern("HELLO", "world"), "WORLD");
         assert_eq!(preserve_case_pattern("Hello", "world"), "World");
@@ -390,6 +419,13 @@ mod tests {
     }
 
     #[test]
+    fn test_filter_cleans_whitespace_without_collapsing_newlines() {
+        let text = "Hello    world\nTest   line";
+        let result = filter_transcription_output(text, "en", &None);
+        assert_eq!(result, "Hello world\nTest line");
+    }
+
+    #[test]
     fn test_filter_trims() {
         let text = "  Hello world  ";
         let result = filter_transcription_output(text, "en", &None);
@@ -415,6 +451,13 @@ mod tests {
         let text = "w wh wh wh wh wh wh wh wh wh why";
         let result = filter_transcription_output(text, "en", &None);
         assert_eq!(result, "w wh why");
+    }
+
+    #[test]
+    fn test_filter_stutter_collapse_preserves_newlines() {
+        let text = "I I I I\nso so so so";
+        let result = filter_transcription_output(text, "en", &None);
+        assert_eq!(result, "I\nso");
     }
 
     #[test]

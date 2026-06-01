@@ -389,20 +389,20 @@ async fn apply_event(state: &Arc<Mutex<LiveSttState>>, notify: &Arc<Notify>, eve
 }
 
 fn merge_final_text(final_text: &mut String, next_final: &str) {
-    if next_final.trim().is_empty() {
+    if trim_padding_except_newlines(next_final).is_empty() {
         return;
     }
 
-    let existing = final_text.trim();
-    let next_without_outer_padding = next_final.trim();
+    let existing = trim_padding_except_newlines(final_text);
+    let next_without_outer_padding = trim_padding_except_newlines(next_final);
 
     if existing.is_empty() {
         final_text.clear();
-        final_text.push_str(next_final.trim_start());
+        final_text.push_str(trim_start_padding_except_newlines(next_final));
         return;
     }
 
-    if next_without_outer_padding.starts_with(existing) {
+    if !existing.is_empty() && next_without_outer_padding.starts_with(existing) {
         final_text.clear();
         final_text.push_str(next_without_outer_padding);
         return;
@@ -412,17 +412,31 @@ fn merge_final_text(final_text: &mut String, next_final: &str) {
 }
 
 fn compose_current_text(final_text: &str, pending_partial: Option<&str>) -> String {
-    let mut current = final_text.trim().to_string();
+    let mut current = trim_padding_except_newlines(final_text).to_string();
 
-    if let Some(partial) = pending_partial.filter(|value| !value.trim().is_empty()) {
+    if let Some(partial) =
+        pending_partial.filter(|value| !trim_padding_except_newlines(value).is_empty())
+    {
         if current.is_empty() {
-            current.push_str(partial.trim_start());
+            current.push_str(trim_start_padding_except_newlines(partial));
         } else {
             current.push_str(partial);
         }
     }
 
     current
+}
+
+fn trim_padding_except_newlines(value: &str) -> &str {
+    value.trim_matches(is_padding_except_newline)
+}
+
+fn trim_start_padding_except_newlines(value: &str) -> &str {
+    value.trim_start_matches(is_padding_except_newline)
+}
+
+fn is_padding_except_newline(value: char) -> bool {
+    value.is_whitespace() && value != '\n'
 }
 
 fn apply_event_to_state(state: &mut LiveSttState, event: LiveSttEvent) -> bool {
@@ -743,6 +757,75 @@ mod tests {
         );
 
         assert_eq!(state.final_text, "hello.");
+    }
+
+    #[test]
+    fn livestt_newline_final_chunk_is_preserved() {
+        let mut state = LiveSttState::default();
+
+        apply_event_to_state(
+            &mut state,
+            LiveSttEvent::Final {
+                session_id: 1,
+                text: "hello".to_string(),
+                is_final: true,
+                start_time: None,
+                end_time: None,
+            },
+        );
+
+        apply_event_to_state(
+            &mut state,
+            LiveSttEvent::Final {
+                session_id: 1,
+                text: "\n".to_string(),
+                is_final: true,
+                start_time: None,
+                end_time: None,
+            },
+        );
+
+        apply_event_to_state(
+            &mut state,
+            LiveSttEvent::Final {
+                session_id: 1,
+                text: "world".to_string(),
+                is_final: true,
+                start_time: None,
+                end_time: None,
+            },
+        );
+
+        assert_eq!(state.final_text, "hello\nworld");
+        assert_eq!(state.current_text, "hello\nworld");
+    }
+
+    #[test]
+    fn livestt_partial_after_newline_final_preserves_line_break() {
+        let mut state = LiveSttState::default();
+
+        apply_event_to_state(
+            &mut state,
+            LiveSttEvent::Final {
+                session_id: 1,
+                text: "hello\n".to_string(),
+                is_final: true,
+                start_time: None,
+                end_time: None,
+            },
+        );
+
+        apply_event_to_state(
+            &mut state,
+            LiveSttEvent::Partial {
+                session_id: 1,
+                text: "wor".to_string(),
+                is_final: false,
+            },
+        );
+
+        assert_eq!(state.final_text, "hello\n");
+        assert_eq!(state.current_text, "hello\nwor");
     }
 
     #[test]
