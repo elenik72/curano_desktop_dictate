@@ -445,24 +445,47 @@ impl AudioRecordingManager {
                 0
             };
 
-            *self.recording_chunk_sender.lock().unwrap() = chunk_sender;
-            if let Some(rec) = self.recorder.lock().unwrap().as_ref() {
-                if rec.start(preroll_samples).is_ok() {
-                    *self.is_recording.lock().unwrap() = true;
-                    *state = RecordingState::Recording {
-                        binding_id: binding_id.to_string(),
-                    };
-                    debug!(
-                        "Recording started for binding {binding_id} (preroll_samples={preroll_samples})"
-                    );
-                    return Ok(());
+            *self.recording_chunk_sender.lock().unwrap() = chunk_sender.clone();
+            let start_result = self.start_recorder(preroll_samples);
+
+            if let Err(err) = start_result {
+                error!("Failed to start recorder: {err}; reopening microphone stream");
+                *self.recording_chunk_sender.lock().unwrap() = None;
+                self.stop_microphone_stream();
+                if let Err(open_err) = self.start_microphone_stream() {
+                    let msg = format!("{open_err}");
+                    error!("Failed to reopen microphone stream: {msg}");
+                    return Err(msg);
+                }
+
+                *self.recording_chunk_sender.lock().unwrap() = chunk_sender;
+                if let Err(retry_err) = self.start_recorder(preroll_samples) {
+                    error!("Failed to start recorder after reopening stream: {retry_err}");
+                    *self.recording_chunk_sender.lock().unwrap() = None;
+                    return Err("Recorder not available".to_string());
                 }
             }
-            *self.recording_chunk_sender.lock().unwrap() = None;
-            Err("Recorder not available".to_string())
+
+            *self.is_recording.lock().unwrap() = true;
+            *state = RecordingState::Recording {
+                binding_id: binding_id.to_string(),
+            };
+            debug!(
+                "Recording started for binding {binding_id} (preroll_samples={preroll_samples})"
+            );
+            Ok(())
         } else {
             Err("Already recording".to_string())
         }
+    }
+
+    fn start_recorder(&self, preroll_samples: usize) -> Result<(), String> {
+        let recorder_opt = self.recorder.lock().unwrap();
+        let Some(rec) = recorder_opt.as_ref() else {
+            return Err("Recorder not available".to_string());
+        };
+        rec.start(preroll_samples)
+            .map_err(|e| format!("Recorder start failed: {e}"))
     }
 
     pub fn update_selected_device(&self) -> Result<(), anyhow::Error> {

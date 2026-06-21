@@ -38,6 +38,7 @@ enum Cmd {
 enum AudioChunk {
     Samples(Vec<f32>),
     EndOfStream,
+    StreamError(String),
 }
 
 pub struct AudioRecorder {
@@ -83,6 +84,8 @@ impl AudioRecorder {
     }
 
     pub fn open(&mut self, device: Option<Device>) -> Result<(), Box<dyn std::error::Error>> {
+        self.cleanup_finished_worker();
+
         if self.worker_handle.is_some() {
             return Ok(()); // already open
         }
@@ -225,31 +228,53 @@ impl AudioRecorder {
     }
 
     pub fn start(&self, preroll_samples: usize) -> Result<(), Box<dyn std::error::Error>> {
-        if let Some(tx) = &self.cmd_tx {
-            tx.send(Cmd::Start { preroll_samples })?;
+        if self
+            .worker_handle
+            .as_ref()
+            .map_or(true, |h| h.is_finished())
+        {
+            return Err(Box::new(Error::new(
+                std::io::ErrorKind::BrokenPipe,
+                "Recorder worker is not running",
+            )));
         }
+        let Some(tx) = &self.cmd_tx else {
+            return Err(Box::new(Error::new(
+                std::io::ErrorKind::NotConnected,
+                "Recorder command channel is not available",
+            )));
+        };
+        tx.send(Cmd::Start { preroll_samples })?;
         Ok(())
     }
 
     pub fn stop(&self) -> Result<Vec<f32>, Box<dyn std::error::Error>> {
         let (resp_tx, resp_rx) = mpsc::channel();
-        if let Some(tx) = &self.cmd_tx {
-            tx.send(Cmd::Stop {
-                reply_tx: resp_tx,
-                flush_remainder: true,
-            })?;
-        }
+        let Some(tx) = &self.cmd_tx else {
+            return Err(Box::new(Error::new(
+                std::io::ErrorKind::NotConnected,
+                "Recorder command channel is not available",
+            )));
+        };
+        tx.send(Cmd::Stop {
+            reply_tx: resp_tx,
+            flush_remainder: true,
+        })?;
         Ok(resp_rx.recv()?) // wait for the samples
     }
 
     pub fn cancel(&self) -> Result<Vec<f32>, Box<dyn std::error::Error>> {
         let (resp_tx, resp_rx) = mpsc::channel();
-        if let Some(tx) = &self.cmd_tx {
-            tx.send(Cmd::Stop {
-                reply_tx: resp_tx,
-                flush_remainder: false,
-            })?;
-        }
+        let Some(tx) = &self.cmd_tx else {
+            return Err(Box::new(Error::new(
+                std::io::ErrorKind::NotConnected,
+                "Recorder command channel is not available",
+            )));
+        };
+        tx.send(Cmd::Stop {
+            reply_tx: resp_tx,
+            flush_remainder: false,
+        })?;
         Ok(resp_rx.recv()?)
     }
 
@@ -262,6 +287,24 @@ impl AudioRecorder {
         }
         self.device = None;
         Ok(())
+    }
+
+    fn cleanup_finished_worker(&mut self) {
+        let worker_finished = self
+            .worker_handle
+            .as_ref()
+            .map(|handle| handle.is_finished())
+            .unwrap_or(false);
+
+        if !worker_finished {
+            return;
+        }
+
+        self.cmd_tx = None;
+        if let Some(handle) = self.worker_handle.take() {
+            let _ = handle.join();
+        }
+        self.device = None;
     }
 
     fn build_stream<T>(
@@ -277,6 +320,7 @@ impl AudioRecorder {
     {
         let mut output_buffer = Vec::new();
         let mut eos_sent = false;
+        let error_tx = sample_tx.clone();
 
         let stream_cb = move |data: &[T], _: &cpal::InputCallbackInfo| {
             if stop_flag.load(Ordering::Relaxed) {
@@ -317,7 +361,11 @@ impl AudioRecorder {
         device.build_input_stream(
             &config.clone().into(),
             stream_cb,
-            |err| log::error!("Stream error: {}", err),
+            move |err| {
+                let message = err.to_string();
+                log::error!("Stream error: {}", message);
+                let _ = error_tx.send(AudioChunk::StreamError(message));
+            },
             None,
         )
     }
@@ -595,6 +643,10 @@ fn run_consumer(
         let raw = match chunk {
             AudioChunk::Samples(s) => s,
             AudioChunk::EndOfStream => continue,
+            AudioChunk::StreamError(message) => {
+                log::warn!("Stopping audio worker after stream error: {message}");
+                break;
+            }
         };
 
         // ---------- spectrum processing ---------------------------------- //
@@ -685,6 +737,10 @@ fn run_consumer(
                                 });
                             }
                             Ok(AudioChunk::EndOfStream) => break,
+                            Ok(AudioChunk::StreamError(message)) => {
+                                log::warn!("Stopping audio drain after stream error: {message}");
+                                break;
+                            }
                             Err(_) => {
                                 log::warn!("Timed out waiting for EndOfStream from audio callback");
                                 break;
