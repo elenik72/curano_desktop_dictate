@@ -267,6 +267,10 @@
           "placeholder": "Optional",
           "error": "Consultation ID must be a positive integer or empty."
         },
+        "dictation": {
+          "title": "Automatic punctuation",
+          "description": "Ask LiveSTT to add punctuation and dictation formatting. Disable to receive less-formatted text."
+        },
         "text": {
           "title": "Text",
           "description": "Optional context (domain, names, glossary) that helps Soniox recognize unusual words. Up to 10000 characters. Sent at the start of each session.",

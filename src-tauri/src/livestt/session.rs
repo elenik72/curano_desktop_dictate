@@ -121,6 +121,7 @@ struct ActiveLiveSttSession {
 struct LiveSttSessionContext {
     app_handle: AppHandle,
     server_url: String,
+    dictation_enabled: bool,
     consultation_id: Option<i64>,
     text: Option<String>,
     terms: Vec<String>,
@@ -136,6 +137,7 @@ impl LiveSttSessionContext {
     fn new(
         app_handle: AppHandle,
         server_url: String,
+        dictation_enabled: bool,
         consultation_id: Option<i64>,
         text: Option<String>,
         terms: Vec<String>,
@@ -146,6 +148,7 @@ impl LiveSttSessionContext {
         Self {
             app_handle,
             server_url,
+            dictation_enabled,
             consultation_id,
             text,
             terms,
@@ -282,6 +285,7 @@ impl LiveSttSessionManager {
             settings::validate_livestt_server_url_required(&app_settings.livestt_server_url)?;
         let consultation_id =
             parse_consultation_id(app_settings.livestt_consultation_id.as_deref())?;
+        let dictation_enabled = app_settings.livestt_dictation_enabled;
         let text = settings::normalize_livestt_text(app_settings.livestt_text.as_deref())?;
         let terms = settings::normalize_livestt_terms(&app_settings.livestt_terms)?;
         let general = settings::normalize_livestt_general(&app_settings.livestt_general)?;
@@ -291,6 +295,7 @@ impl LiveSttSessionManager {
         let client = connect_initial_livestt_client(
             &app_handle,
             server_url.clone(),
+            dictation_enabled,
             consultation_id,
             text.clone(),
             terms.clone(),
@@ -302,6 +307,7 @@ impl LiveSttSessionManager {
         let context = Arc::new(LiveSttSessionContext::new(
             app_handle,
             server_url,
+            dictation_enabled,
             consultation_id,
             text,
             terms,
@@ -489,6 +495,7 @@ fn spawn_livestt_event_bridge(app_handle: AppHandle, mut event_rx: mpsc::Receive
 async fn connect_initial_livestt_client(
     app_handle: &AppHandle,
     server_url: String,
+    dictation_enabled: bool,
     consultation_id: Option<i64>,
     text: Option<String>,
     terms: Vec<String>,
@@ -498,6 +505,7 @@ async fn connect_initial_livestt_client(
     let token = ensure_fresh_livestt_access_token(app_handle).await?;
     match connect_livestt_client(
         server_url.clone(),
+        dictation_enabled,
         consultation_id,
         text.clone(),
         terms.clone(),
@@ -515,6 +523,7 @@ async fn connect_initial_livestt_client(
             let token = force_refresh_livestt_access_token(app_handle).await?;
             connect_livestt_client(
                 server_url,
+                dictation_enabled,
                 consultation_id,
                 text,
                 terms,
@@ -531,6 +540,7 @@ async fn connect_initial_livestt_client(
 #[allow(clippy::too_many_arguments)]
 async fn connect_livestt_client(
     server_url: String,
+    dictation_enabled: bool,
     consultation_id: Option<i64>,
     text: Option<String>,
     terms: Vec<String>,
@@ -541,6 +551,7 @@ async fn connect_livestt_client(
     let config = LiveSttConfig {
         server_url,
         access_token,
+        dictation_enabled,
         consultation_id,
         text,
         terms,
@@ -694,6 +705,7 @@ async fn reconnect_with_refresh_and_replay(
     let access_token = force_refresh_livestt_access_token(&context.app_handle).await?;
     let client = connect_livestt_client(
         context.server_url.clone(),
+        context.dictation_enabled,
         context.consultation_id,
         context.text.clone(),
         context.terms.clone(),

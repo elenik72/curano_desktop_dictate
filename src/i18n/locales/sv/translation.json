@@ -661,6 +661,10 @@
           "title": "Finalize Timeout",
           "description": "Maximum time to wait for LiveSTT finalization after stopping recording, in milliseconds.",
           "error": "Finalize timeout must be between 1 and 120000 milliseconds."
+        },
+        "dictation": {
+          "title": "Automatic punctuation",
+          "description": "Ask LiveSTT to add punctuation and dictation formatting. Disable to receive less-formatted text."
         }
       }
     }

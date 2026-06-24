@@ -616,6 +616,18 @@ pub fn change_livestt_consultation_id_setting(
 
 #[tauri::command]
 #[specta::specta]
+pub fn change_livestt_dictation_enabled_setting(
+    app: AppHandle,
+    enabled: bool,
+) -> Result<(), String> {
+    let mut settings = settings::get_settings(&app);
+    settings.livestt_dictation_enabled = enabled;
+    settings::write_settings(&app, settings);
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
 pub fn change_livestt_finalize_timeout_ms_setting(
     app: AppHandle,
     timeout_ms: u64,

@@ -281,13 +281,13 @@ pub fn polling_loop(app: AppHandle, status: Arc<Mutex<SpeechMikeStatus>>) {
         }
 
         // ── 6. After read loop exits ──────────────────────────────────────
-        // If we were in Connected state (not already transitioned to Blocked),
-        // emit disconnect once.
-        if last_emit != LastEmit::Disconnected && last_emit != LastEmit::Blocked {
-            emit_disconnected(&app, &status, &mut last_emit);
-        }
-        // No explicit sleep here — outer loop immediately re-checks device list.
-        // DISCONNECT_GRACE debounce in step 2 prevents UI flapping.
+        // A read error does not necessarily mean the device was physically
+        // unplugged. On Windows, SpeechMike can briefly invalidate the opened
+        // HID handle while the device still appears in enumeration a moment
+        // later. Keep the frontend in its current state here and let the
+        // candidates.is_empty() path above debounce real disconnects.
+        log::debug!("SpeechMike: reopening HID interface after read loop ended");
+        std::thread::sleep(Duration::from_millis(100));
     }
 }
 

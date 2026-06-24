@@ -348,6 +348,7 @@ pub fn run(cli_args: CliArgs) {
             shortcut::change_transcription_backend_setting,
             shortcut::change_livestt_server_url_setting,
             shortcut::change_livestt_consultation_id_setting,
+            shortcut::change_livestt_dictation_enabled_setting,
             shortcut::change_livestt_finalize_timeout_ms_setting,
             shortcut::change_livestt_preroll_ms_setting,
             shortcut::change_livestt_text_setting,

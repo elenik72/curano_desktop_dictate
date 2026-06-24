@@ -625,6 +625,10 @@
           "placeholder": "Optional",
           "error": "Consultation ID must be a positive integer or empty."
         },
+        "dictation": {
+          "title": "Автоматическая пунктуация",
+          "description": "LiveSTT будет добавлять пунктуацию и форматирование диктовки. Отключите, если нужен менее отформатированный текст."
+        },
         "text": {
           "title": "Prompt",
           "description": "Optional context (domain, names, glossary) that helps Soniox recognize unusual words. Up to 10000 characters. Sent at the start of each session.",
