@@ -358,7 +358,7 @@ jobs:
         if: ${{ !inputs.sign-binaries }}
         shell: bash
         run: |
-          bun -e "const fs = require('fs'); const p = 'src-tauri/tauri.conf.json'; const config = JSON.parse(fs.readFileSync(p, 'utf8')); config.bundle ??= {}; config.bundle.createUpdaterArtifacts = false; fs.writeFileSync(p, JSON.stringify(config, null, 2) + '\n');"
+          bun -e "const fs = require('fs'); const p = 'src-tauri/tauri.conf.json'; const config = JSON.parse(fs.readFileSync(p, 'utf8')); config.bundle ??= {}; config.bundle.createUpdaterArtifacts = false; if (config.bundle.macOS) config.bundle.macOS.hardenedRuntime = false; fs.writeFileSync(p, JSON.stringify(config, null, 2) + '\n');"
 
       - name: Build with Tauri (signed)
         if: inputs.sign-binaries
@@ -435,6 +435,19 @@ jobs:
               echo "OK: $libname"
             fi
           done
+
+          if [[ "${{ inputs.sign-binaries }}" == "true" ]]; then
+            echo "=== Checking nested code signing Team IDs ==="
+            app_team="$(codesign -dv --verbose=4 "$APP" 2>&1 | awk -F= '/TeamIdentifier=/ {print $2; exit}')"
+            dylib="$APP/Contents/Frameworks/libonnxruntime.1.24.2.dylib"
+            dylib_team="$(codesign -dv --verbose=4 "$dylib" 2>&1 | awk -F= '/TeamIdentifier=/ {print $2; exit}')"
+            echo "App TeamIdentifier: ${app_team:-<none>}"
+            echo "ONNX TeamIdentifier: ${dylib_team:-<none>}"
+            if [[ -n "$app_team" && "$app_team" != "$dylib_team" ]]; then
+              echo "MISMATCH: ONNX Runtime dylib is not signed with the app Team ID."
+              exit 1
+            fi
+          fi
 
       - name: Upload artifacts (macOS)
         if: inputs.upload-artifacts && contains(inputs.platform, 'macos')
