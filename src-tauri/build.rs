@@ -1,6 +1,12 @@
 fn main() {
-    #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
-    build_apple_intelligence_bridge();
+    #[cfg(target_os = "macos")]
+    {
+        let target_os = std::env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
+        let target_arch = std::env::var("CARGO_CFG_TARGET_ARCH").unwrap_or_default();
+        if target_os == "macos" && target_arch == "aarch64" {
+            build_apple_intelligence_bridge();
+        }
+    }
 
     generate_tray_translations();
 
@@ -111,7 +117,7 @@ fn escape_string(s: &str) -> String {
         .replace('\t', "\\t")
 }
 
-#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+#[cfg(target_os = "macos")]
 fn build_apple_intelligence_bridge() {
     use std::env;
     use std::path::{Path, PathBuf};

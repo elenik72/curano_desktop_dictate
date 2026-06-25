@@ -306,6 +306,10 @@ jobs:
           curl -L -o ort.tgz "https://blob.handy.computer/onnxruntime-osx-x86_64-${ORT_VERSION}.tgz"
           tar xzf ort.tgz
           ORT_DIR="$(pwd)/onnxruntime-osx-x86_64-${ORT_VERSION}"
+          # The upstream dylib may already be signed by a different Apple Team ID.
+          # If it is copied into our signed .app as-is, macOS refuses to load it
+          # because nested code must be signed by the same team as the host app.
+          find "$ORT_DIR/lib" -name "libonnxruntime*.dylib" -exec codesign --remove-signature {} \; || true
           echo "ORT_LIB_LOCATION=$ORT_DIR/lib" >> $GITHUB_ENV
           echo "ORT_PREFER_DYNAMIC_LINK=1" >> $GITHUB_ENV
           # Bundle the versioned dylib (matches the install name @rpath/libonnxruntime.1.24.2.dylib)
