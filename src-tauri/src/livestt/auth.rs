@@ -2,19 +2,47 @@ use std::sync::Mutex;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use base64::Engine;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tauri::{AppHandle, Manager};
+use tauri_plugin_store::StoreExt;
 
 use crate::settings;
 
 use super::types::LiveSttAuthStatus;
 
 const LIVESTT_REFRESH_PROACTIVE_WINDOW_SECONDS: i64 = 60;
+const LIVESTT_AUTH_STORE_PATH: &str = "livestt_auth_store.json";
+const LIVESTT_AUTH_TOKENS_KEY: &str = "tokens";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LiveSttTokens {
     pub access_token: String,
     pub refresh_token: String,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+struct StoredLiveSttTokens {
+    access_token: String,
+    refresh_token: String,
+}
+
+impl From<LiveSttTokens> for StoredLiveSttTokens {
+    fn from(tokens: LiveSttTokens) -> Self {
+        Self {
+            access_token: tokens.access_token,
+            refresh_token: tokens.refresh_token,
+        }
+    }
+}
+
+impl From<StoredLiveSttTokens> for LiveSttTokens {
+    fn from(tokens: StoredLiveSttTokens) -> Self {
+        Self {
+            access_token: tokens.access_token,
+            refresh_token: tokens.refresh_token,
+        }
+    }
 }
 
 pub struct LiveSttAuthState {
@@ -66,6 +94,68 @@ impl LiveSttAuthState {
                 !tokens.access_token.trim().is_empty() && !tokens.refresh_token.trim().is_empty()
             })
             .unwrap_or(false)
+    }
+}
+
+fn valid_tokens(tokens: &LiveSttTokens) -> bool {
+    !tokens.access_token.trim().is_empty() && !tokens.refresh_token.trim().is_empty()
+}
+
+fn load_persisted_livestt_tokens(app: &AppHandle) -> Option<LiveSttTokens> {
+    let store = app
+        .store(crate::portable::store_path(LIVESTT_AUTH_STORE_PATH))
+        .ok()?;
+
+    let value = store.get(LIVESTT_AUTH_TOKENS_KEY)?;
+    let tokens: StoredLiveSttTokens = serde_json::from_value(value).ok()?;
+    let tokens: LiveSttTokens = tokens.into();
+
+    if valid_tokens(&tokens) {
+        Some(tokens)
+    } else {
+        None
+    }
+}
+
+fn persist_livestt_tokens(app: &AppHandle, tokens: &LiveSttTokens) -> Result<(), String> {
+    if !valid_tokens(tokens) {
+        return Err("Cannot persist empty LiveSTT tokens".to_string());
+    }
+
+    let store = app
+        .store(crate::portable::store_path(LIVESTT_AUTH_STORE_PATH))
+        .map_err(|e| format!("Failed to initialize LiveSTT auth store: {}", e))?;
+
+    store.set(
+        LIVESTT_AUTH_TOKENS_KEY,
+        serde_json::to_value(StoredLiveSttTokens::from(tokens.clone()))
+            .map_err(|e| format!("Failed to serialize LiveSTT tokens: {}", e))?,
+    );
+
+    Ok(())
+}
+
+pub fn restore_persisted_livestt_tokens(app: &AppHandle) {
+    let Some(tokens) = load_persisted_livestt_tokens(app) else {
+        return;
+    };
+
+    let auth_state = app.state::<LiveSttAuthState>();
+    auth_state.set_tokens(tokens.access_token, tokens.refresh_token);
+    log::debug!("LiveSTT persisted auth session restored");
+}
+
+pub fn clear_persisted_livestt_tokens(app: &AppHandle) {
+    match app.store(crate::portable::store_path(LIVESTT_AUTH_STORE_PATH)) {
+        Ok(store) => {
+            store.set(LIVESTT_AUTH_TOKENS_KEY, Value::Null);
+        }
+        Err(e) => {
+            log::warn!(
+                "Failed to initialize LiveSTT auth store for clearing: {}",
+                e
+            );
+        }
     }
 }
 
@@ -194,6 +284,7 @@ pub async fn livestt_login(
     );
 
     let auth_state = app.state::<LiveSttAuthState>();
+    persist_livestt_tokens(&app, &tokens)?;
     auth_state.set_tokens(tokens.access_token, tokens.refresh_token);
 
     Ok(())
@@ -275,6 +366,7 @@ async fn refresh_livestt_access_token_locked(
             body.len()
         );
         auth_state.clear_tokens();
+        clear_persisted_livestt_tokens(app_handle);
         return Err("LiveSTT login expired; please log in again".to_string());
     }
 
@@ -304,6 +396,7 @@ async fn refresh_livestt_access_token_locked(
     );
 
     let access_token = new_tokens.access_token.clone();
+    persist_livestt_tokens(app_handle, &new_tokens)?;
     auth_state.set_tokens(new_tokens.access_token, new_tokens.refresh_token);
 
     Ok(access_token)
@@ -322,6 +415,7 @@ pub fn livestt_logout(app: AppHandle) -> Result<(), String> {
 
     let auth_state = app.state::<LiveSttAuthState>();
     auth_state.clear_tokens();
+    clear_persisted_livestt_tokens(&app);
 
     cancel_result
 }

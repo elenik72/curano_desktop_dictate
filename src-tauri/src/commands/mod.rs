@@ -192,8 +192,9 @@ pub fn initialize_shortcuts(app: AppHandle) -> Result<(), String> {
         return Ok(());
     }
 
-    // Initialize shortcuts
-    crate::shortcut::init_shortcuts(&app);
+    // Initialize shortcuts. Do not mark them initialized if registration failed:
+    // macOS may report accessibility access before the hotkey backend can use it.
+    crate::shortcut::init_shortcuts(&app)?;
 
     // Mark as initialized
     app.manage(ShortcutsInitialized);

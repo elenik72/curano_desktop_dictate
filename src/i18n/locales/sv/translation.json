@@ -600,7 +600,7 @@
         },
         "auth": {
           "title": "Authentication",
-          "description": "Sign in to the configured Curano LiveSTT server. Access tokens are kept in memory only.",
+          "description": "Sign in to the configured Curano LiveSTT server. Session tokens are saved so you stay signed in after restart.",
           "authenticated": "Authenticated",
           "unauthenticated": "Not authenticated",
           "updating": "Working..."

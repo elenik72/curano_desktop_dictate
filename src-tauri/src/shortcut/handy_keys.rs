@@ -89,12 +89,25 @@ impl NativeKeysState {
     /// Create a new NativeKeysState
     pub fn new(app: AppHandle) -> Result<Self, String> {
         let (cmd_tx, cmd_rx) = mpsc::channel::<ManagerCommand>();
+        let (startup_tx, startup_rx) = mpsc::channel::<Result<(), String>>();
 
         // Start the manager thread
         let app_clone = app.clone();
         let thread_handle = thread::spawn(move || {
-            Self::manager_thread(cmd_rx, app_clone);
+            Self::manager_thread(cmd_rx, app_clone, startup_tx);
         });
+
+        match startup_rx.recv() {
+            Ok(Ok(())) => {}
+            Ok(Err(e)) => {
+                let _ = thread_handle.join();
+                return Err(e);
+            }
+            Err(_) => {
+                let _ = thread_handle.join();
+                return Err("Failed to start handy-keys manager thread".into());
+            }
+        }
 
         Ok(Self {
             command_sender: Mutex::new(cmd_tx),
@@ -107,17 +120,24 @@ impl NativeKeysState {
     }
 
     /// The main manager thread - owns the HotkeyManager and processes commands
-    fn manager_thread(cmd_rx: Receiver<ManagerCommand>, app: AppHandle) {
+    fn manager_thread(
+        cmd_rx: Receiver<ManagerCommand>,
+        app: AppHandle,
+        startup: Sender<Result<(), String>>,
+    ) {
         info!("handy-keys manager thread started");
 
         // Create the HotkeyManager in this thread
         let manager = match HotkeyManager::new_with_blocking() {
             Ok(m) => m,
             Err(e) => {
-                error!("Failed to create HotkeyManager: {}", e);
+                let error = format!("Failed to create HotkeyManager: {}", e);
+                error!("{}", error);
+                let _ = startup.send(Err(error));
                 return;
             }
         };
+        let _ = startup.send(Ok(()));
 
         // Maps binding IDs to HotkeyIds and hotkey strings
         let mut binding_to_hotkey: HashMap<String, HotkeyId> = HashMap::new();
@@ -427,6 +447,7 @@ pub fn init_shortcuts(app: &AppHandle) -> Result<(), String> {
 
     let default_bindings = settings::get_default_settings().bindings;
     let user_settings = settings::load_or_create_app_settings(app);
+    let mut errors = Vec::new();
 
     // Register all bindings except cancel (which is dynamic)
     for (id, default_binding) in default_bindings {
@@ -449,7 +470,15 @@ pub fn init_shortcuts(app: &AppHandle) -> Result<(), String> {
                 "Failed to register handy-keys shortcut {} during init: {}",
                 id, e
             );
+            errors.push(format!("{}: {}", id, e));
         }
+    }
+
+    if !errors.is_empty() {
+        return Err(format!(
+            "Failed to register handy-keys shortcuts: {}",
+            errors.join("; ")
+        ));
     }
 
     app.manage(state);

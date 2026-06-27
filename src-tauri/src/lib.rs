@@ -545,6 +545,8 @@ pub fn run(cli_args: CliArgs) {
         .setup(move |app| {
             specta_builder.mount_events(app);
 
+            livestt::auth::restore_persisted_livestt_tokens(app.handle());
+
             // Wire the log ring to the app handle so it can emit events
             app.state::<Arc<log_sink::LogRing>>()
                 .set_app_handle(app.handle().clone());

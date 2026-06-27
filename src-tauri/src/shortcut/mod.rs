@@ -30,18 +30,27 @@ use crate::tray;
 
 // Note: Commands are accessed via shortcut::handy_keys:: in lib.rs
 
+fn is_accessibility_permission_error(error: &str) -> bool {
+    let normalized = error.to_lowercase();
+    normalized.contains("accessibility") || normalized.contains("permission")
+}
+
 /// Initialize shortcuts using the configured implementation
-pub fn init_shortcuts(app: &AppHandle) {
+pub fn init_shortcuts(app: &AppHandle) -> Result<(), String> {
     let user_settings = settings::load_or_create_app_settings(app);
 
     // Check which implementation to use
     match user_settings.keyboard_implementation {
         KeyboardImplementation::Tauri => {
-            tauri_impl::init_shortcuts(app);
+            tauri_impl::init_shortcuts(app)?;
         }
         KeyboardImplementation::NativeKeys => {
             if let Err(e) = handy_keys::init_shortcuts(app) {
                 error!("Failed to initialize handy-keys shortcuts: {}", e);
+                if is_accessibility_permission_error(&e) {
+                    return Err(e);
+                }
+
                 // Fall back to Tauri implementation and persist this fallback
                 warn!("Falling back to Tauri global shortcut implementation and saving fallback to settings");
 
@@ -50,10 +59,17 @@ pub fn init_shortcuts(app: &AppHandle) {
                 settings.keyboard_implementation = KeyboardImplementation::Tauri;
                 settings::write_settings(app, settings);
 
-                tauri_impl::init_shortcuts(app);
+                tauri_impl::init_shortcuts(app).map_err(|fallback_error| {
+                    format!(
+                        "NativeKeys failed: {}. Tauri fallback also failed: {}",
+                        e, fallback_error
+                    )
+                })?;
             }
         }
     }
+
+    Ok(())
 }
 
 /// Register the cancel shortcut (called when recording starts)
@@ -452,11 +468,20 @@ fn initialize_handy_keys_with_rollback(app: &AppHandle) -> Result<bool, String> 
 
     if let Err(e) = handy_keys::init_shortcuts(app) {
         error!("Failed to initialize NativeKeys: {}", e);
+        if is_accessibility_permission_error(&e) {
+            return Err(e);
+        }
+
         // Rollback to Tauri
         let mut settings = settings::get_settings(app);
         settings.keyboard_implementation = KeyboardImplementation::Tauri;
         settings::write_settings(app, settings);
-        tauri_impl::init_shortcuts(app);
+        tauri_impl::init_shortcuts(app).map_err(|fallback_error| {
+            format!(
+                "Failed to initialize NativeKeys: {}. Tauri fallback also failed: {}",
+                e, fallback_error
+            )
+        })?;
         return Err(format!(
             "Failed to initialize NativeKeys: {}. Reverted to Tauri.",
             e
@@ -589,6 +614,7 @@ fn clear_livestt_runtime_state(app: &AppHandle) {
     if let Some(auth_state) = app.try_state::<crate::livestt::auth::LiveSttAuthState>() {
         auth_state.clear_tokens();
     }
+    crate::livestt::auth::clear_persisted_livestt_tokens(app);
 
     if let Some(manager) =
         app.try_state::<std::sync::Arc<crate::livestt::session::LiveSttSessionManager>>()

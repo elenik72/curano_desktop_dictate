@@ -14,9 +14,10 @@ use crate::settings::{self, ShortcutBinding};
 use super::handler::handle_shortcut_event;
 
 /// Initialize shortcuts using Tauri's global-shortcut plugin
-pub fn init_shortcuts(app: &AppHandle) {
+pub fn init_shortcuts(app: &AppHandle) -> Result<(), String> {
     let default_bindings = settings::get_default_settings().bindings;
     let user_settings = settings::load_or_create_app_settings(app);
+    let mut errors = Vec::new();
 
     // Register all default shortcuts, applying user customizations
     for (id, default_binding) in default_bindings {
@@ -35,7 +36,17 @@ pub fn init_shortcuts(app: &AppHandle) {
 
         if let Err(e) = register_shortcut(app, binding) {
             error!("Failed to register shortcut {} during init: {}", id, e);
+            errors.push(format!("{}: {}", id, e));
         }
+    }
+
+    if errors.is_empty() {
+        Ok(())
+    } else {
+        Err(format!(
+            "Failed to register Tauri shortcuts: {}",
+            errors.join("; ")
+        ))
     }
 }
 
