@@ -5,8 +5,15 @@ use tauri::{AppHandle, State};
 
 #[tauri::command]
 #[specta::specta]
-pub fn get_speechmike_status(state: State<'_, Arc<SpeechMikeManager>>) -> SpeechMikeStatus {
-    state.get_status()
+pub fn get_speechmike_status(
+    app: AppHandle,
+    state: State<'_, Arc<SpeechMikeManager>>,
+) -> SpeechMikeStatus {
+    let mut status = state.get_status();
+    if status.supported_platform {
+        status.auto_select_enabled = get_settings(&app).speechmike_auto_select;
+    }
+    status
 }
 
 #[tauri::command]

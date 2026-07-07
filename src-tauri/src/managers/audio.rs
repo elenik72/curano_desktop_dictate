@@ -3,7 +3,8 @@ use crate::helpers::clamshell;
 use crate::livestt::session::LiveSttAudioSender;
 use crate::settings::{get_settings, AppSettings};
 use crate::utils;
-use log::{debug, error, info};
+use cpal::traits::DeviceTrait;
+use log::{debug, error, info, warn};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -221,10 +222,34 @@ impl AudioRecordingManager {
 
         // Find the device by name
         match list_input_devices() {
-            Ok(devices) => devices
-                .into_iter()
-                .find(|d| d.name == *device_name)
-                .map(|d| d.device),
+            Ok(devices) => {
+                let available_names = devices
+                    .iter()
+                    .map(|d| {
+                        if d.is_default {
+                            format!("{} (default)", d.name)
+                        } else {
+                            d.name.clone()
+                        }
+                    })
+                    .collect::<Vec<_>>();
+                debug!(
+                    "Resolving selected microphone '{}'; available input devices: {:?}",
+                    device_name, available_names
+                );
+
+                let selected = devices
+                    .into_iter()
+                    .find(|d| d.name == *device_name)
+                    .map(|d| d.device);
+                if selected.is_none() {
+                    warn!(
+                        "Selected microphone '{}' is not present in CPAL input devices; falling back to system default input",
+                        device_name
+                    );
+                }
+                selected
+            }
             Err(e) => {
                 debug!("Failed to list devices, using default: {}", e);
                 None
@@ -303,8 +328,21 @@ impl AudioRecordingManager {
     pub fn start_microphone_stream(&self) -> Result<(), anyhow::Error> {
         let mut open_flag = self.is_open.lock().unwrap();
         if *open_flag {
-            debug!("Microphone stream already active");
-            return Ok(());
+            let worker_running = self
+                .recorder
+                .lock()
+                .unwrap()
+                .as_mut()
+                .map(|rec| rec.is_worker_running())
+                .unwrap_or(false);
+
+            if worker_running {
+                debug!("Microphone stream already active");
+                return Ok(());
+            }
+
+            warn!("Microphone stream was marked active but recorder worker is gone; reopening");
+            *open_flag = false;
         }
 
         let start_time = Instant::now();
@@ -316,6 +354,11 @@ impl AudioRecordingManager {
         // Get the selected device from settings, considering clamshell mode
         let settings = get_settings(&self.app_handle);
         let selected_device = self.get_effective_microphone_device(&settings);
+        let selected_device_name = selected_device
+            .as_ref()
+            .and_then(|device| device.name().ok())
+            .unwrap_or_else(|| "system default input".to_string());
+        info!("Opening microphone stream for device: {selected_device_name}");
 
         // Pre-flight check: if no device was selected/configured AND no devices
         // exist at all, fail early with a clear error instead of letting cpal
@@ -480,10 +523,13 @@ impl AudioRecordingManager {
     }
 
     fn start_recorder(&self, preroll_samples: usize) -> Result<(), String> {
-        let recorder_opt = self.recorder.lock().unwrap();
-        let Some(rec) = recorder_opt.as_ref() else {
+        let mut recorder_opt = self.recorder.lock().unwrap();
+        let Some(rec) = recorder_opt.as_mut() else {
             return Err("Recorder not available".to_string());
         };
+        if !rec.is_worker_running() {
+            return Err("Recorder worker is not running".to_string());
+        }
         rec.start(preroll_samples)
             .map_err(|e| format!("Recorder start failed: {e}"))
     }

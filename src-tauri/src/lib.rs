@@ -547,6 +547,24 @@ pub fn run(cli_args: CliArgs) {
 
             livestt::auth::restore_persisted_livestt_tokens(app.handle());
 
+            // Re-login with persisted credentials on startup so the LiveSTT
+            // session is always fresh. Restored tokens above remain the
+            // fallback if the network is unavailable or credentials changed.
+            {
+                let app_handle = app.handle().clone();
+                tauri::async_runtime::spawn(async move {
+                    match livestt::auth::relogin_with_persisted_credentials(&app_handle).await {
+                        Ok(()) => {
+                            log::info!("LiveSTT startup re-login succeeded");
+                            let _ = app_handle.emit("livestt://auth-changed", ());
+                        }
+                        Err(e) => {
+                            log::warn!("LiveSTT startup re-login skipped: {e}");
+                        }
+                    }
+                });
+            }
+
             // Wire the log ring to the app handle so it can emit events
             app.state::<Arc<log_sink::LogRing>>()
                 .set_app_handle(app.handle().clone());
@@ -556,7 +574,7 @@ pub fn run(cli_args: CliArgs) {
             let mut win_builder =
                 tauri::WebviewWindowBuilder::new(app, "main", tauri::WebviewUrl::App("/".into()))
                     .title("Curano AI Dictate")
-                    .inner_size(780.0, 570.0)
+                    .inner_size(900.0, 680.0)
                     .min_inner_size(680.0, 570.0)
                     .resizable(true)
                     .maximizable(false)

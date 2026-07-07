@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { listen } from "@tauri-apps/api/event";
 import { commands } from "@/bindings";
 import { Button } from "../../ui/Button";
 import { Input } from "../../ui/Input";
@@ -33,11 +34,15 @@ export const LiveSttAuthSettings: React.FC<LiveSttAuthSettingsProps> = ({
       const result = await commands.livesttAuthStatus();
       if (result.status === "ok") {
         setIsAuthenticated(result.data.is_authenticated);
+        setUsername(result.data.username ?? "");
+        setPassword(result.data.password ?? "");
         return;
       }
     } catch {}
 
     setIsAuthenticated(false);
+    setUsername("");
+    setPassword("");
   };
 
   useEffect(() => {
@@ -45,6 +50,15 @@ export const LiveSttAuthSettings: React.FC<LiveSttAuthSettingsProps> = ({
     setAuthError(null);
     void refreshAuthStatus();
   }, [refreshKey]);
+
+  useEffect(() => {
+    const unlisten = listen("livestt://auth-changed", () => {
+      void refreshAuthStatus();
+    });
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, []);
 
   const canLogin =
     !isAuthUpdating &&
@@ -82,7 +96,6 @@ export const LiveSttAuthSettings: React.FC<LiveSttAuthSettingsProps> = ({
     } catch {
       setAuthError(t("settings.transcriptionBackend.livestt.loginErrorSafe"));
     } finally {
-      setPassword("");
       await refreshAuthStatus();
       setIsAuthUpdating(false);
     }
@@ -110,6 +123,8 @@ export const LiveSttAuthSettings: React.FC<LiveSttAuthSettingsProps> = ({
       setAuthError(t("settings.transcriptionBackend.livestt.logoutErrorSafe"));
     } finally {
       await refreshAuthStatus();
+      setUsername("");
+      setPassword("");
       setIsAuthUpdating(false);
     }
   };

@@ -981,7 +981,7 @@ reset_bindings: string[] }
 export type KeyboardImplementation = "tauri" | "handy_keys"
 export type LLMPrompt = { id: string; name: string; prompt: string }
 export type LiveSttAudioFormat = "pcm"
-export type LiveSttAuthStatus = { is_authenticated: boolean }
+export type LiveSttAuthStatus = { is_authenticated: boolean; username: string | null; password: string | null }
 export type LiveSttGeneralEntry = { key: string; value: string }
 export type LogEntry = { ts_ms: number; level: string; target: string; message: string; source: string }
 export type LogLevel = "trace" | "debug" | "info" | "warn" | "error"

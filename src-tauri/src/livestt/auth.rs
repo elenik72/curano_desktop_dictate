@@ -14,6 +14,7 @@ use super::types::LiveSttAuthStatus;
 const LIVESTT_REFRESH_PROACTIVE_WINDOW_SECONDS: i64 = 60;
 const LIVESTT_AUTH_STORE_PATH: &str = "livestt_auth_store.json";
 const LIVESTT_AUTH_TOKENS_KEY: &str = "tokens";
+const LIVESTT_AUTH_CREDENTIALS_KEY: &str = "credentials";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LiveSttTokens {
@@ -25,6 +26,12 @@ pub struct LiveSttTokens {
 struct StoredLiveSttTokens {
     access_token: String,
     refresh_token: String,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+struct StoredLiveSttCredentials {
+    username: String,
+    password: String,
 }
 
 impl From<LiveSttTokens> for StoredLiveSttTokens {
@@ -135,6 +142,46 @@ fn persist_livestt_tokens(app: &AppHandle, tokens: &LiveSttTokens) -> Result<(),
     Ok(())
 }
 
+fn load_persisted_livestt_credentials(app: &AppHandle) -> Option<StoredLiveSttCredentials> {
+    let store = app
+        .store(crate::portable::store_path(LIVESTT_AUTH_STORE_PATH))
+        .ok()?;
+
+    let value = store.get(LIVESTT_AUTH_CREDENTIALS_KEY)?;
+    let credentials: StoredLiveSttCredentials = serde_json::from_value(value).ok()?;
+
+    if credentials.username.trim().is_empty() || credentials.password.is_empty() {
+        None
+    } else {
+        Some(credentials)
+    }
+}
+
+fn persist_livestt_credentials(
+    app: &AppHandle,
+    username: &str,
+    password: &str,
+) -> Result<(), String> {
+    if username.trim().is_empty() || password.is_empty() {
+        return Err("Cannot persist empty LiveSTT credentials".to_string());
+    }
+
+    let store = app
+        .store(crate::portable::store_path(LIVESTT_AUTH_STORE_PATH))
+        .map_err(|e| format!("Failed to initialize LiveSTT auth store: {}", e))?;
+
+    store.set(
+        LIVESTT_AUTH_CREDENTIALS_KEY,
+        serde_json::to_value(StoredLiveSttCredentials {
+            username: username.trim().to_string(),
+            password: password.to_string(),
+        })
+        .map_err(|e| format!("Failed to serialize LiveSTT credentials: {}", e))?,
+    );
+
+    Ok(())
+}
+
 pub fn restore_persisted_livestt_tokens(app: &AppHandle) {
     let Some(tokens) = load_persisted_livestt_tokens(app) else {
         return;
@@ -149,6 +196,7 @@ pub fn clear_persisted_livestt_tokens(app: &AppHandle) {
     match app.store(crate::portable::store_path(LIVESTT_AUTH_STORE_PATH)) {
         Ok(store) => {
             store.set(LIVESTT_AUTH_TOKENS_KEY, Value::Null);
+            store.set(LIVESTT_AUTH_CREDENTIALS_KEY, Value::Null);
         }
         Err(e) => {
             log::warn!(
@@ -220,12 +268,7 @@ pub async fn livestt_login(
 ) -> Result<(), String> {
     let base_url = settings::validate_livestt_server_url_required(&server_url)?;
 
-    let login_url = format!("{}/auth/login", base_url);
-
     let username = username.trim().to_string();
-
-    log::debug!("LiveSTT login request url={}", login_url);
-    log::debug!("LiveSTT login username_present={}", !username.is_empty());
 
     if username.is_empty() {
         return Err("LiveSTT username is empty".to_string());
@@ -235,15 +278,39 @@ pub async fn livestt_login(
         return Err("LiveSTT password is empty".to_string());
     }
 
+    perform_livestt_login(&app, &base_url, &username, &password).await
+}
+
+/// Re-login using credentials persisted from the last successful login.
+/// Called on startup so the LiveSTT session always starts fresh.
+pub async fn relogin_with_persisted_credentials(app: &AppHandle) -> Result<(), String> {
+    let credentials = load_persisted_livestt_credentials(app)
+        .ok_or_else(|| "no persisted LiveSTT credentials".to_string())?;
+
+    let app_settings = settings::get_settings(app);
+    let base_url =
+        settings::validate_livestt_server_url_required(&app_settings.livestt_server_url)?;
+
+    perform_livestt_login(app, &base_url, &credentials.username, &credentials.password).await
+}
+
+async fn perform_livestt_login(
+    app: &AppHandle,
+    base_url: &str,
+    username: &str,
+    password: &str,
+) -> Result<(), String> {
+    let login_url = format!("{}/auth/login", base_url);
+
+    log::debug!("LiveSTT login request url={}", login_url);
+    log::debug!("LiveSTT login username_present={}", !username.is_empty());
+
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(30))
         .build()
         .map_err(|e| format!("Failed to build LiveSTT login client: {}", e))?;
 
-    let form = [
-        ("username", username.as_str()),
-        ("password", password.as_str()),
-    ];
+    let form = [("username", username), ("password", password)];
 
     let response = client
         .post(&login_url)
@@ -284,7 +351,8 @@ pub async fn livestt_login(
     );
 
     let auth_state = app.state::<LiveSttAuthState>();
-    persist_livestt_tokens(&app, &tokens)?;
+    persist_livestt_tokens(app, &tokens)?;
+    persist_livestt_credentials(app, username, password)?;
     auth_state.set_tokens(tokens.access_token, tokens.refresh_token);
 
     Ok(())
@@ -424,9 +492,12 @@ pub fn livestt_logout(app: AppHandle) -> Result<(), String> {
 #[specta::specta]
 pub fn livestt_auth_status(app: AppHandle) -> Result<LiveSttAuthStatus, String> {
     let auth_state = app.state::<LiveSttAuthState>();
+    let credentials = load_persisted_livestt_credentials(&app);
 
     Ok(LiveSttAuthStatus {
         is_authenticated: auth_state.is_authenticated(),
+        username: credentials.as_ref().map(|c| c.username.clone()),
+        password: credentials.map(|c| c.password),
     })
 }
 

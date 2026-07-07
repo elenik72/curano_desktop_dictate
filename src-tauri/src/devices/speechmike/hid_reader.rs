@@ -5,7 +5,9 @@ use tauri::{AppHandle, Emitter, Manager};
 
 use super::buttons::parse_button_event;
 use super::dispatch::dispatch_button_event;
-use super::identify::{find_matching_audio_device, pick_speechmike_interfaces};
+use super::identify::{
+    find_matching_audio_device, is_button_hid_interface, pick_speechmike_interfaces,
+};
 use super::status::SpeechMikeStatus;
 use crate::managers::audio::AudioRecordingManager;
 use crate::settings::{get_settings, write_settings};
@@ -27,6 +29,7 @@ enum LastEmit {
         vid: u16,
         pid: u16,
         serial: Option<String>,
+        buttons_enabled: bool,
     },
     Blocked,
 }
@@ -34,6 +37,9 @@ enum LastEmit {
 /// How long a device must be continuously missing / unreadable before we
 /// emit a disconnect event to the frontend.
 const DISCONNECT_GRACE: Duration = Duration::from_millis(1500);
+const AUDIO_READY_DELAY: Duration = Duration::from_secs(3);
+const AUDIO_SWITCH_RETRY_DELAY: Duration = Duration::from_secs(2);
+const AUDIO_SWITCH_ATTEMPTS: usize = 3;
 
 /// Entry point for the background HID polling thread. Runs forever.
 ///
@@ -47,6 +53,8 @@ const DISCONNECT_GRACE: Duration = Duration::from_millis(1500);
 pub fn polling_loop(app: AppHandle, status: Arc<Mutex<SpeechMikeStatus>>) {
     let mut hid_api: Option<HidApi> = None;
     let mut last_emit = LastEmit::Disconnected;
+    let mut hid_button_polling_suppressed = false;
+    let mut defaults_applied_for_connection = false;
     // Tracks when the device first went missing (for debounce).
     let mut missing_since: Option<Instant> = None;
 
@@ -80,6 +88,7 @@ pub fn polling_loop(app: AppHandle, status: Arc<Mutex<SpeechMikeStatus>>) {
                 && last_emit != LastEmit::Disconnected
             {
                 emit_disconnected(&app, &status, &mut last_emit);
+                defaults_applied_for_connection = false;
             }
             if missing_since
                 .map(|t| t.elapsed() >= DISCONNECT_GRACE)
@@ -93,6 +102,77 @@ pub fn polling_loop(app: AppHandle, status: Arc<Mutex<SpeechMikeStatus>>) {
 
         // Device is physically present — reset the missing-device timer.
         missing_since = None;
+        if !defaults_applied_for_connection {
+            enable_speechmike_defaults(&app);
+            defaults_applied_for_connection = true;
+        }
+
+        let button_candidates = candidates
+            .iter()
+            .filter(|candidate| is_button_hid_interface(candidate))
+            .cloned()
+            .collect::<Vec<_>>();
+        let hid_buttons_enabled = get_settings(&app).speechmike_button_mapping_enabled
+            && !hid_button_polling_suppressed
+            && !button_candidates.is_empty();
+        if !hid_buttons_enabled {
+            let candidate = &candidates[0];
+            let new_key = LastEmit::Connected {
+                vid: candidate.vendor_id,
+                pid: candidate.product_id,
+                serial: candidate.serial.clone(),
+                buttons_enabled: false,
+            };
+
+            if last_emit != new_key {
+                let audio_name = find_matching_audio_device(&candidate.product_name);
+                {
+                    let mut s = lock_status(&status);
+                    s.connected = true;
+                    s.blocked_by_other_app = false;
+                    s.device_name = Some(candidate.product_name.clone());
+                    s.vendor_id = Some(candidate.vendor_id);
+                    s.product_id = Some(candidate.product_id);
+                    s.serial_number = candidate.serial.clone();
+                    s.audio_device_name = audio_name.clone();
+                    s.buttons_enabled = false;
+                    s.auto_select_enabled = get_settings(&app).speechmike_auto_select;
+                    s.detected_blocking_processes = vec![];
+                    s.last_error = None;
+                }
+                if button_candidates.is_empty() {
+                    log::warn!(
+                        "SpeechMike connected: {} (VID={:#06x} PID={:#06x}, no safe HID button interface)",
+                        candidate.product_name,
+                        candidate.vendor_id,
+                        candidate.product_id,
+                    );
+                } else if hid_button_polling_suppressed {
+                    log::warn!(
+                        "SpeechMike connected: {} (VID={:#06x} PID={:#06x}, HID button polling suppressed after read errors)",
+                        candidate.product_name,
+                        candidate.vendor_id,
+                        candidate.product_id,
+                    );
+                } else {
+                    log::info!(
+                        "SpeechMike connected: {} (VID={:#06x} PID={:#06x}, buttons disabled)",
+                        candidate.product_name,
+                        candidate.vendor_id,
+                        candidate.product_id,
+                    );
+                }
+                let snapshot = lock_status(&status).clone();
+                let _ = app.emit("speechmike://connected", snapshot);
+                maybe_auto_select_microphone(&app, &audio_name);
+                last_emit = new_key;
+            } else {
+                refresh_audio_device(&app, &status, &candidate.product_name);
+            }
+
+            std::thread::sleep(Duration::from_secs(2));
+            continue;
+        }
 
         // ── 3. Try to open each candidate interface in priority order ─────
         let mut opened = None;
@@ -101,7 +181,7 @@ pub fn polling_loop(app: AppHandle, status: Arc<Mutex<SpeechMikeStatus>>) {
         // populate device info even when all HID open attempts fail (blocked case).
         let mut first_meta: Option<(String, u16, u16, Option<String>)> = None;
 
-        for candidate in candidates {
+        for candidate in button_candidates {
             if first_meta.is_none() {
                 first_meta = Some((
                     candidate.product_name.clone(),
@@ -149,6 +229,7 @@ pub fn polling_loop(app: AppHandle, status: Arc<Mutex<SpeechMikeStatus>>) {
                     s.serial_number = serial;
                     s.audio_device_name = audio_name.clone();
                     s.buttons_enabled = false;
+                    s.auto_select_enabled = get_settings(&app).speechmike_auto_select;
                     s.detected_blocking_processes = processes;
                 }
                 let snapshot = lock_status(&status).clone();
@@ -165,6 +246,7 @@ pub fn polling_loop(app: AppHandle, status: Arc<Mutex<SpeechMikeStatus>>) {
             vid: candidate.vendor_id,
             pid: candidate.product_id,
             serial: candidate.serial.clone(),
+            buttons_enabled: true,
         };
 
         if last_emit != new_key {
@@ -179,24 +261,31 @@ pub fn polling_loop(app: AppHandle, status: Arc<Mutex<SpeechMikeStatus>>) {
                 s.serial_number = candidate.serial.clone();
                 s.audio_device_name = audio_name.clone();
                 s.buttons_enabled = true;
+                s.auto_select_enabled = get_settings(&app).speechmike_auto_select;
                 s.detected_blocking_processes = vec![];
                 s.last_error = None;
             }
             log::info!(
-                "SpeechMike connected: {} (VID={:#06x} PID={:#06x})",
+                "SpeechMike connected: {} (VID={:#06x} PID={:#06x}, usage_page={:#06x}, usage={:#06x}, interface={})",
                 candidate.product_name,
                 candidate.vendor_id,
                 candidate.product_id,
+                candidate.usage_page,
+                candidate.usage,
+                candidate.interface_number,
             );
             let snapshot = lock_status(&status).clone();
             let _ = app.emit("speechmike://connected", snapshot);
             maybe_auto_select_microphone(&app, &audio_name);
             last_emit = new_key;
+        } else {
+            refresh_audio_device(&app, &status, &candidate.product_name);
         }
 
         // ── 5. Inner read loop — stays here while device is healthy ───────
         let mut buf = [0u8; 64];
         let mut read_err_since: Option<Instant> = None;
+        let mut last_report: Option<Vec<u8>> = None;
 
         'read: loop {
             match device.read_timeout(&mut buf, 50) {
@@ -227,6 +316,11 @@ pub fn polling_loop(app: AppHandle, status: Arc<Mutex<SpeechMikeStatus>>) {
                     }
 
                     if settings.speechmike_button_mapping_enabled {
+                        if last_report.as_ref() == Some(&raw) {
+                            continue;
+                        }
+                        last_report = Some(raw.clone());
+
                         if let Some(event) = parse_button_event(&raw) {
                             dispatch_button_event(&app, event);
                         }
@@ -248,6 +342,7 @@ pub fn polling_loop(app: AppHandle, status: Arc<Mutex<SpeechMikeStatus>>) {
                                 s.connected = true; // physically present; audio still works
                                 s.blocked_by_other_app = true;
                                 s.buttons_enabled = false;
+                                s.auto_select_enabled = get_settings(&app).speechmike_auto_select;
                                 s.audio_device_name = audio_name.clone();
                                 s.detected_blocking_processes = processes;
                                 s.last_error = Some(err_str);
@@ -269,9 +364,30 @@ pub fn polling_loop(app: AppHandle, status: Arc<Mutex<SpeechMikeStatus>>) {
                         }
                         if read_err_since.unwrap().elapsed() >= DISCONNECT_GRACE {
                             log::warn!(
-                                "SpeechMike: persistent read errors after {:.1}s, disconnecting",
+                                "SpeechMike: persistent read errors after {:.1}s; suppressing HID button polling for this session",
                                 DISCONNECT_GRACE.as_secs_f32()
                             );
+                            hid_button_polling_suppressed = true;
+                            let audio_name = find_matching_audio_device(&candidate.product_name);
+                            {
+                                let mut s = lock_status(&status);
+                                s.connected = true;
+                                s.blocked_by_other_app = false;
+                                s.buttons_enabled = false;
+                                s.auto_select_enabled = get_settings(&app).speechmike_auto_select;
+                                s.audio_device_name = audio_name.clone();
+                                s.detected_blocking_processes = vec![];
+                                s.last_error = Some(err_str);
+                            }
+                            let snapshot = lock_status(&status).clone();
+                            let _ = app.emit("speechmike://connected", snapshot);
+                            maybe_auto_select_microphone(&app, &audio_name);
+                            last_emit = LastEmit::Connected {
+                                vid: candidate.vendor_id,
+                                pid: candidate.product_id,
+                                serial: candidate.serial.clone(),
+                                buttons_enabled: false,
+                            };
                             break 'read;
                         }
                         std::thread::sleep(Duration::from_millis(100));
@@ -352,6 +468,52 @@ fn lock_status(
     status.lock().unwrap_or_else(|e| e.into_inner())
 }
 
+fn enable_speechmike_defaults(app: &AppHandle) {
+    let mut settings = get_settings(app);
+    if settings.speechmike_auto_select && settings.speechmike_button_mapping_enabled {
+        return;
+    }
+
+    settings.speechmike_auto_select = true;
+    settings.speechmike_button_mapping_enabled = true;
+    settings.selected_microphone_user_overridden = false;
+    write_settings(app, settings);
+    log::info!("SpeechMike defaults enabled: auto-select and button mapping");
+}
+
+/// CoreAudio can register the USB audio interface later than HID enumeration.
+/// Keep retrying while the HID device is physically present so auto-select does
+/// not miss a SpeechMike that appears a few seconds after connection.
+fn refresh_audio_device(
+    app: &AppHandle,
+    status: &Arc<Mutex<SpeechMikeStatus>>,
+    product_name: &str,
+) {
+    let Some(audio_name) = find_matching_audio_device(product_name) else {
+        return;
+    };
+
+    let changed = {
+        let mut s = lock_status(status);
+        if s.audio_device_name.as_ref() == Some(&audio_name) {
+            false
+        } else {
+            s.audio_device_name = Some(audio_name.clone());
+            true
+        }
+    };
+
+    if changed {
+        log::info!("SpeechMike audio device became available: {audio_name}");
+        let snapshot = lock_status(status).clone();
+        let _ = app.emit("speechmike://connected", snapshot);
+    }
+
+    if changed {
+        maybe_auto_select_microphone(app, &Some(audio_name));
+    }
+}
+
 /// Auto-select the SpeechMike audio device if the user hasn't manually chosen one.
 fn maybe_auto_select_microphone(app: &AppHandle, audio_name: &Option<String>) {
     let Some(name) = audio_name else {
@@ -367,13 +529,55 @@ fn maybe_auto_select_microphone(app: &AppHandle, audio_name: &Option<String>) {
     settings.speechmike_last_seen_name = Some(name.clone());
     write_settings(app, settings);
 
-    if let Some(rm) = app.try_state::<Arc<AudioRecordingManager>>() {
-        if let Err(e) = rm.update_selected_device() {
-            log::error!("SpeechMike auto-select: failed to switch audio device: {e}");
-        }
-    }
+    schedule_microphone_update(app.clone(), name.clone());
+    log::info!(
+        "SpeechMike auto-selected audio device: {name}; waiting {:?} before opening stream",
+        AUDIO_READY_DELAY
+    );
+}
 
-    log::info!("SpeechMike auto-selected audio device: {name}");
+fn schedule_microphone_update(app: AppHandle, name: String) {
+    std::thread::spawn(move || {
+        for attempt in 1..=AUDIO_SWITCH_ATTEMPTS {
+            let delay = if attempt == 1 {
+                AUDIO_READY_DELAY
+            } else {
+                AUDIO_SWITCH_RETRY_DELAY
+            };
+            std::thread::sleep(delay);
+
+            let settings = get_settings(&app);
+            if settings.selected_microphone.as_ref() != Some(&name) {
+                log::debug!(
+                    "SpeechMike auto-select: selected microphone changed before retry, skipping {name}"
+                );
+                return;
+            }
+
+            let Some(rm) = app.try_state::<Arc<AudioRecordingManager>>() else {
+                log::debug!("SpeechMike auto-select: audio manager not ready");
+                return;
+            };
+
+            match rm.update_selected_device() {
+                Ok(()) => {
+                    log::info!(
+                        "SpeechMike auto-select: switched audio device to {name} on attempt {attempt}"
+                    );
+                    return;
+                }
+                Err(e) => {
+                    log::warn!(
+                        "SpeechMike auto-select: switch attempt {attempt}/{AUDIO_SWITCH_ATTEMPTS} failed for {name}: {e}"
+                    );
+                }
+            }
+        }
+
+        log::error!(
+            "SpeechMike auto-select: failed to switch audio device to {name} after {AUDIO_SWITCH_ATTEMPTS} attempts"
+        );
+    });
 }
 
 #[cfg(target_os = "windows")]
