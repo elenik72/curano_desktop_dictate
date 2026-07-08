@@ -1239,6 +1239,7 @@ dependencies = [
  "tempfile",
  "tokio",
  "tokio-tungstenite",
+ "tokio-util",
  "transcribe-rs",
  "url",
  "vad-rs",

@@ -15,7 +15,8 @@
     "postProcessing": "Post-traitement",
     "history": "Historique",
     "debug": "Débogage",
-    "about": "À propos"
+    "about": "À propos",
+    "transcripts": "Transcripts"
   },
   "onboarding": {
     "subtitle": "Pour commencer, choisissez un modèle de transcription",
@@ -233,7 +234,19 @@
         "actionCancel": "Cancel current recording",
         "actionPostProcess": "Record with AI post-processing",
         "actionTranscribePtt": "Start / stop recording (push-to-talk)",
-        "learnSpeechControl": "Learn about SpeechControl SDK (Windows)"
+        "learnSpeechControl": "Learn about SpeechControl SDK (Windows)",
+        "micTest": {
+          "title": "Microphone test",
+          "description": "Speak into the SpeechMike to check the input level. Nothing is recorded.",
+          "start": "Test",
+          "stop": "Stop"
+        },
+        "audioRestart": {
+          "button": "Restart audio",
+          "description": "Fully restarts audio capture. Use when the microphone stopped delivering sound."
+        },
+        "micUsersTitle": "Other apps are using the microphone",
+        "micUsers": "Also capturing audio right now: {{processes}}. If dictation is silent, close them and press Restart audio."
       }
     },
     "sound": {
@@ -667,6 +680,50 @@
           "description": "Ask LiveSTT to add punctuation and dictation formatting. Disable to receive less-formatted text."
         }
       }
+    },
+    "transcripts": {
+      "title": "Audio transcripts",
+      "dropTitle": "Drag audio files here or click to choose",
+      "dropHint": "mp3, m4a, wav, ogg, flac and more · up to 10 files at once",
+      "dropOverlay": "Drop audio files to upload",
+      "filePickerFilter": "Audio files",
+      "empty": "No uploads yet. Drop audio files here to get transcripts.",
+      "noTranscript": "Transcript is not ready yet — audio can be played already.",
+      "authRequired": "Sign in to the transcription server in General settings to upload audio.",
+      "copy": "Copy",
+      "copied": "Transcript copied",
+      "fullscreen": "Expand",
+      "expand": "Show transcript",
+      "collapse": "Hide transcript",
+      "close": "Close",
+      "cancel": "Cancel upload",
+      "retry": "Retry",
+      "delete": "Delete",
+      "deleteConfirm": "Delete this audio and its transcript?",
+      "readyToast": "{{name}} — transcript ready",
+      "failedToast": "{{name}} — transcription failed",
+      "status": {
+        "queued": "Queued",
+        "uploading": "Uploading",
+        "processing": "Transcribing",
+        "completed": "Done",
+        "failed": "Failed"
+      },
+      "errors": {
+        "generic": "Something went wrong. Try again.",
+        "unsupported": "Unsupported file type",
+        "someSkipped": "Some files were skipped (unsupported type)",
+        "tooMany": "Up to 10 files at once",
+        "too_many_files": "Up to 10 files at once",
+        "unsupported_files": "Unsupported file type",
+        "no_files": "No files selected",
+        "source_missing": "Original file not found on disk",
+        "interrupted": "Upload interrupted",
+        "transcription_failed": "Transcription failed",
+        "consultation_deleted": "Deleted on the server",
+        "deleteFailed": "Failed to delete. Try again.",
+        "audioUnavailable": "Audio is not available yet"
+      }
     }
   },
   "footer": {
@@ -729,7 +786,10 @@
     "modelLoadFailed": "Échec du chargement du modèle : {{model}}",
     "modelLoadFailedUnknown": "modèle inconnu",
     "pasteFailedTitle": "Échec du collage du texte",
-    "pasteFailed": "Le texte n'a pas pu être collé dans l'application active."
+    "pasteFailed": "Le texte n'a pas pu être collé dans l'application active.",
+    "emptyRecordingTitle": "Nothing was transcribed",
+    "emptyRecordingSilent": "The microphone delivered no audio. Check the input device and level, or use the microphone test in SpeechMike settings.",
+    "emptyRecordingUnrecognized": "Audio was captured but no speech was recognized. Try speaking louder or closer to the microphone."
   },
   "appLanguage": {
     "title": "Langue de l'application",

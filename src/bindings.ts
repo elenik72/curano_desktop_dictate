@@ -857,8 +857,32 @@ async stopMicTest() : Promise<Result<null, string>> {
     else return { status: "error", error: e  as any };
 }
 },
+/**
+ * Full audio-stack restart: fresh recorder + stream. UI recovery button for
+ * OS-level audio-session corruption that survives plain stream reopens.
+ */
+async restartAudioStack() : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("restart_audio_stack") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async getSpeechmikeStatus() : Promise<SpeechMikeStatus> {
     return await TAURI_INVOKE("get_speechmike_status");
+},
+/**
+ * Processes with an active audio-capture session (Windows). Empty elsewhere.
+ * Lets the UI warn that another app is also using the microphone.
+ */
+async getMicrophoneUsers() : Promise<Result<string[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_microphone_users") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 },
 async setSpeechmikeAutoSelect(enabled: boolean) : Promise<Result<null, string>> {
     try {
@@ -951,6 +975,41 @@ async updateRecordingRetentionPeriod(period: string) : Promise<Result<null, stri
     else return { status: "error", error: e  as any };
 }
 },
+async uploadsList() : Promise<UploadEntry[]> {
+    return await TAURI_INVOKE("uploads_list");
+},
+async uploadsAddFiles(paths: string[]) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("uploads_add_files", { paths }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async uploadsCancel(id: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("uploads_cancel", { id }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async uploadsRetry(id: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("uploads_retry", { id }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async uploadsDelete(id: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("uploads_delete", { id }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 /**
  * Checks if the Mac is a laptop by detecting battery presence
  * 
@@ -971,9 +1030,13 @@ async isLaptop() : Promise<Result<boolean, string>> {
 
 
 export const events = __makeEvents__<{
-historyUpdatePayload: HistoryUpdatePayload
+historyUpdatePayload: HistoryUpdatePayload,
+uploadProgressPayload: UploadProgressPayload,
+uploadsChangedPayload: UploadsChangedPayload
 }>({
-historyUpdatePayload: "history-update-payload"
+historyUpdatePayload: "history-update-payload",
+uploadProgressPayload: "upload-progress-payload",
+uploadsChangedPayload: "uploads-changed-payload"
 })
 
 /** user-defined constants **/
@@ -1029,6 +1092,32 @@ export type SoundTheme = "marimba" | "pop" | "custom"
 export type SpeechMikeStatus = { supported_platform: boolean; connected: boolean; blocked_by_other_app: boolean; device_name: string | null; vendor_id: number | null; product_id: number | null; serial_number: string | null; audio_device_name: string | null; buttons_enabled: boolean; auto_select_enabled: boolean; last_error: string | null; detected_blocking_processes: string[] }
 export type TranscriptionBackend = "local" | "live_stt"
 export type TypingTool = "auto" | "wtype" | "kwtype" | "dotool" | "ydotool" | "xdotool"
+/**
+ * One audio file uploaded for server-side transcription.
+ * 
+ * Each entry owns a dedicated consultation on the Curano backend — the
+ * consultation is an invisible container required by the API, never shown
+ * to the user.
+ */
+export type UploadEntry = { id: string; file_name: string; 
+/**
+ * Original local path; kept for retry. May point to a moved/deleted file.
+ */
+source_path: string | null; size_bytes: number; consultation_id: number | null; audio_id: number | null; created_at_ms: number; status: UploadStatus; 
+/**
+ * Upload progress 0-100, only meaningful while `Uploading`.
+ */
+progress: number; transcript: string | null; error: string | null }
+export type UploadProgressPayload = { id: string; progress: number }
+/**
+ * Lifecycle of a single uploaded audio file.
+ * 
+ * `Queued`/`Uploading` are local stages; `Processing` means the file is on
+ * the server and transcription is running there; `Completed`/`Failed` are
+ * terminal.
+ */
+export type UploadStatus = "queued" | "uploading" | "processing" | "completed" | "failed"
+export type UploadsChangedPayload = { entries: UploadEntry[] }
 export type WhisperAcceleratorSetting = "auto" | "cpu" | "gpu"
 export type WindowsMicrophonePermissionStatus = { supported: boolean; overall_access: PermissionAccess; device_access: PermissionAccess; app_access: PermissionAccess; desktop_app_access: PermissionAccess }
 

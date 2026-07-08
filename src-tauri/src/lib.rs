@@ -22,6 +22,7 @@ mod transcription_coordinator;
 mod transcription_finalizer;
 mod tray;
 mod tray_i18n;
+mod uploads;
 mod utils;
 
 pub use cli::CliArgs;
@@ -457,9 +458,18 @@ pub fn run(cli_args: CliArgs) {
             commands::history::retry_history_entry_transcription,
             commands::history::update_history_limit,
             commands::history::update_recording_retention_period,
+            uploads::commands::uploads_list,
+            uploads::commands::uploads_add_files,
+            uploads::commands::uploads_cancel,
+            uploads::commands::uploads_retry,
+            uploads::commands::uploads_delete,
             helpers::clamshell::is_laptop,
         ])
-        .events(collect_events![managers::history::HistoryUpdatePayload,]);
+        .events(collect_events![
+            managers::history::HistoryUpdatePayload,
+            uploads::types::UploadsChangedPayload,
+            uploads::types::UploadProgressPayload,
+        ]);
 
     #[cfg(debug_assertions)] // <- Only export on non-release builds
     specta_builder
@@ -548,6 +558,8 @@ pub fn run(cli_args: CliArgs) {
         .manage(Arc::new(livestt::session::LiveSttSessionManager::default()))
         .setup(move |app| {
             specta_builder.mount_events(app);
+
+            app.manage(uploads::manager::UploadsManager::new(app.handle().clone()));
 
             livestt::auth::restore_persisted_livestt_tokens(app.handle());
 

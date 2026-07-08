@@ -14,6 +14,7 @@
     "advanced": "Erweitert",
     "postProcessing": "Nachbearbeitung",
     "history": "Verlauf",
+    "transcripts": "Transkripte",
     "debug": "Debug",
     "about": "Info"
   },
@@ -233,7 +234,19 @@
         "actionCancel": "Cancel current recording",
         "actionPostProcess": "Record with AI post-processing",
         "actionTranscribePtt": "Start / stop recording (push-to-talk)",
-        "learnSpeechControl": "Learn about SpeechControl SDK (Windows)"
+        "learnSpeechControl": "Learn about SpeechControl SDK (Windows)",
+        "micTest": {
+          "title": "Microphone test",
+          "description": "Speak into the SpeechMike to check the input level. Nothing is recorded.",
+          "start": "Test",
+          "stop": "Stop"
+        },
+        "audioRestart": {
+          "button": "Restart audio",
+          "description": "Fully restarts audio capture. Use when the microphone stopped delivering sound."
+        },
+        "micUsersTitle": "Other apps are using the microphone",
+        "micUsers": "Also capturing audio right now: {{processes}}. If dictation is silent, close them and press Restart audio."
       }
     },
     "sound": {
@@ -456,6 +469,50 @@
       "providers": {
         "local": "Local",
         "livestt": "LiveSTT"
+      }
+    },
+    "transcripts": {
+      "title": "Audio-Transkripte",
+      "dropTitle": "Audiodateien hierher ziehen oder klicken zum Auswählen",
+      "dropHint": "mp3, m4a, wav, ogg, flac und mehr · bis zu 10 Dateien auf einmal",
+      "dropOverlay": "Dateien zum Hochladen ablegen",
+      "filePickerFilter": "Audiodateien",
+      "empty": "Noch keine Uploads. Audiodateien hierher ziehen, um Transkripte zu erhalten.",
+      "noTranscript": "Transkript ist noch nicht fertig — Audio kann bereits abgespielt werden.",
+      "authRequired": "Melden Sie sich in den allgemeinen Einstellungen am Transkriptionsserver an, um Audio hochzuladen.",
+      "copy": "Kopieren",
+      "copied": "Transkript kopiert",
+      "fullscreen": "Vergrößern",
+      "expand": "Transkript anzeigen",
+      "collapse": "Transkript ausblenden",
+      "close": "Schließen",
+      "cancel": "Upload abbrechen",
+      "retry": "Wiederholen",
+      "delete": "Löschen",
+      "deleteConfirm": "Dieses Audio und sein Transkript löschen?",
+      "readyToast": "{{name}} — Transkript fertig",
+      "failedToast": "{{name}} — Transkription fehlgeschlagen",
+      "status": {
+        "queued": "In Warteschlange",
+        "uploading": "Wird hochgeladen",
+        "processing": "Wird transkribiert",
+        "completed": "Fertig",
+        "failed": "Fehlgeschlagen"
+      },
+      "errors": {
+        "generic": "Etwas ist schiefgelaufen. Versuchen Sie es erneut.",
+        "unsupported": "Nicht unterstützter Dateityp",
+        "someSkipped": "Einige Dateien wurden übersprungen (nicht unterstützter Typ)",
+        "tooMany": "Maximal 10 Dateien auf einmal",
+        "too_many_files": "Maximal 10 Dateien auf einmal",
+        "unsupported_files": "Nicht unterstützter Dateityp",
+        "no_files": "Keine Dateien ausgewählt",
+        "source_missing": "Originaldatei nicht auf der Festplatte gefunden",
+        "interrupted": "Upload unterbrochen",
+        "transcription_failed": "Transkription fehlgeschlagen",
+        "consultation_deleted": "Auf dem Server gelöscht",
+        "deleteFailed": "Löschen fehlgeschlagen. Versuchen Sie es erneut.",
+        "audioUnavailable": "Audio ist noch nicht verfügbar"
       }
     },
     "debug": {
@@ -729,7 +786,10 @@
     "modelLoadFailed": "Modell konnte nicht geladen werden: {{model}}",
     "modelLoadFailedUnknown": "unbekanntes Modell",
     "pasteFailedTitle": "Text konnte nicht eingefügt werden",
-    "pasteFailed": "Der Text konnte nicht in die aktive Anwendung eingefügt werden."
+    "pasteFailed": "Der Text konnte nicht in die aktive Anwendung eingefügt werden.",
+    "emptyRecordingTitle": "Nothing was transcribed",
+    "emptyRecordingSilent": "The microphone delivered no audio. Check the input device and level, or use the microphone test in SpeechMike settings.",
+    "emptyRecordingUnrecognized": "Audio was captured but no speech was recognized. Try speaking louder or closer to the microphone."
   },
   "appLanguage": {
     "title": "Anwendungssprache",
