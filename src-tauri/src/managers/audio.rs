@@ -263,37 +263,59 @@ impl AudioRecordingManager {
         let manager = self.clone();
         std::thread::Builder::new()
             .name("mic-stream-watchdog".to_string())
-            .spawn(move || loop {
-                std::thread::sleep(STREAM_STALL_POLL_INTERVAL);
+            .spawn(move || {
+                // Escalation counter: consecutive stall recoveries that did not
+                // bring audio back. After WATCHDOG_RESET_THRESHOLD plain stream
+                // reopens, the OS audio session itself is suspect ("RPC failed",
+                // "Class not registered") — do a full stack reset instead.
+                const WATCHDOG_RESET_THRESHOLD: u32 = 2;
+                let mut consecutive_stalls: u32 = 0;
 
-                // Hold the state lock across the check AND the reopen to
-                // serialize against try_start_recording (same pattern as
-                // schedule_lazy_close): a recording must not begin between the
-                // Idle check and the stream teardown.
-                let state = manager.state.lock().unwrap();
-                if !matches!(*state, RecordingState::Idle) {
-                    continue;
-                }
-                if !*manager.is_open.lock().unwrap() {
-                    continue;
-                }
+                loop {
+                    std::thread::sleep(STREAM_STALL_POLL_INTERVAL);
 
-                let stalled_for = manager.last_audio_activity.lock().unwrap().elapsed();
-                if stalled_for < STREAM_STALL_TIMEOUT {
-                    continue;
-                }
+                    // Hold the state lock across the check AND the reopen to
+                    // serialize against try_start_recording (same pattern as
+                    // schedule_lazy_close): a recording must not begin between
+                    // the Idle check and the stream teardown.
+                    let state = manager.state.lock().unwrap();
+                    if !matches!(*state, RecordingState::Idle) {
+                        continue;
+                    }
+                    if !*manager.is_open.lock().unwrap() {
+                        continue;
+                    }
 
-                warn!(
-                    "Microphone stream delivered no audio for {:?}; reopening stream",
-                    stalled_for
-                );
-                if let Err(e) = manager.update_selected_device() {
-                    error!("Stream watchdog failed to reopen microphone: {e}");
+                    let stalled_for = manager.last_audio_activity.lock().unwrap().elapsed();
+                    if stalled_for < STREAM_STALL_TIMEOUT {
+                        // Audio is flowing again — de-escalate.
+                        consecutive_stalls = 0;
+                        continue;
+                    }
+
+                    consecutive_stalls += 1;
+                    if consecutive_stalls >= WATCHDOG_RESET_THRESHOLD {
+                        warn!(
+                            "Microphone stream still silent after {} reopen attempts; performing full audio-stack reset",
+                            consecutive_stalls - 1
+                        );
+                        if let Err(e) = manager.reset_audio_stack_locked() {
+                            error!("Stream watchdog full reset failed: {e}");
+                        }
+                    } else {
+                        warn!(
+                            "Microphone stream delivered no audio for {:?}; reopening stream",
+                            stalled_for
+                        );
+                        if let Err(e) = manager.update_selected_device() {
+                            error!("Stream watchdog failed to reopen microphone: {e}");
+                        }
+                    }
+                    // Reset either way so a persistently broken device retries
+                    // at STREAM_STALL_TIMEOUT cadence instead of every poll tick.
+                    *manager.last_audio_activity.lock().unwrap() = Instant::now();
+                    drop(state);
                 }
-                // Reset either way so a persistently broken device retries at
-                // STREAM_STALL_TIMEOUT cadence instead of every poll tick.
-                *manager.last_audio_activity.lock().unwrap() = Instant::now();
-                drop(state);
             })
             .expect("failed to spawn mic-stream-watchdog thread");
     }
@@ -524,6 +546,36 @@ impl AudioRecordingManager {
 
         *open_flag = false;
         debug!("Microphone stream stopped");
+    }
+
+    /// Full audio-stack reset: tear down the stream AND the recorder (fresh
+    /// WASAPI/CoreAudio objects), then reopen in always-on mode. Recovers from
+    /// OS-level audio-session corruption ("RPC failed", "Class not registered")
+    /// that a plain stream reopen cannot fix. Refuses to run mid-recording.
+    pub fn reset_audio_stack(&self) -> Result<(), anyhow::Error> {
+        // Hold the state lock across the teardown to serialize against
+        // try_start_recording (same pattern as the stall watchdog).
+        let state = self.state.lock().unwrap();
+        if !matches!(*state, RecordingState::Idle) {
+            return Err(anyhow::anyhow!(
+                "Cannot reset the audio stack while recording"
+            ));
+        }
+        self.reset_audio_stack_locked()
+    }
+
+    /// Core of the reset; caller must hold the `state` lock with `Idle` state.
+    fn reset_audio_stack_locked(&self) -> Result<(), anyhow::Error> {
+        warn!("Resetting audio stack: dropping recorder and reopening stream");
+        self.close_generation.fetch_add(1, Ordering::SeqCst);
+        self.stop_microphone_stream();
+        *self.recorder.lock().unwrap() = None;
+
+        if matches!(*self.mode.lock().unwrap(), MicrophoneMode::AlwaysOn) {
+            // start_microphone_stream recreates the recorder via preload_vad.
+            self.start_microphone_stream()?;
+        }
+        Ok(())
     }
 
     /// Close the microphone stream only when it is safe: on-demand mode and no

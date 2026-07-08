@@ -25,6 +25,15 @@ fn custom_sound_exists(app: &AppHandle, sound_type: &str) -> bool {
         .map_or(false, |path| path.exists())
 }
 
+/// Full audio-stack restart: fresh recorder + stream. UI recovery button for
+/// OS-level audio-session corruption that survives plain stream reopens.
+#[tauri::command]
+#[specta::specta]
+pub fn restart_audio_stack(app: AppHandle) -> Result<(), String> {
+    let rm = app.state::<Arc<AudioRecordingManager>>();
+    rm.reset_audio_stack().map_err(|e| e.to_string())
+}
+
 /// Open the microphone stream so `mic-level` events flow for the mic-test UI.
 /// No-op when the stream is already open (always-on mode or active recording).
 #[tauri::command]

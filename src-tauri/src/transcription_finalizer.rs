@@ -27,6 +27,16 @@ pub enum TranscriptionFinalizeStatus {
     PasteFailed,
 }
 
+/// Payload for the `transcription-empty` event: lets the UI distinguish a
+/// silent microphone (near-zero samples) from a server that failed to
+/// recognize otherwise-present audio.
+#[derive(serde::Serialize, Clone)]
+struct TranscriptionEmptyEvent {
+    provider: String,
+    sample_count: usize,
+    wav_file: Option<String>,
+}
+
 /// Strip invisible Unicode characters that some LLMs or streaming providers may insert.
 pub(crate) fn strip_invisible_chars(s: &str) -> String {
     s.replace(['\u{200B}', '\u{200C}', '\u{200D}', '\u{FEFF}'], "")
@@ -152,9 +162,36 @@ pub async fn finalize_transcription_outcome(
     let transcription = clean_transcription_text(&app_settings, &outcome.raw_text);
 
     if transcription.trim().is_empty() {
+        let sample_count = outcome.samples.as_ref().map(|s| s.len()).unwrap_or(0);
         warn!(
-            "{} returned empty final text; skipping paste",
-            options.provider_label_for_logs
+            "{} returned empty final text; skipping paste (local_samples={})",
+            options.provider_label_for_logs, sample_count
+        );
+
+        // Keep the audio for diagnosis: an empty result is exactly the case
+        // where listening to what was captured matters most.
+        let wav_file = match outcome.samples {
+            Some(samples) if !samples.is_empty() => {
+                save_recording_wav(
+                    Arc::clone(&history_manager),
+                    samples,
+                    options.provider_label_for_logs,
+                )
+                .await
+            }
+            _ => None,
+        };
+        if let Some(name) = &wav_file {
+            warn!("Empty-result audio saved for diagnosis: {name}");
+        }
+
+        let _ = app.emit(
+            "transcription-empty",
+            TranscriptionEmptyEvent {
+                provider: options.provider_label_for_logs.to_string(),
+                sample_count,
+                wav_file,
+            },
         );
         cleanup_finalization_ui(&app);
         return Ok(TranscriptionFinalizeStatus::SkippedEmpty);

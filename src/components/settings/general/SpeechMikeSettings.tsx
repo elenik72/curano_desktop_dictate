@@ -31,6 +31,16 @@ export const SpeechMikeSettings: React.FC = () => {
   const [isMicTesting, setIsMicTesting] = useState(false);
   const [micLevel, setMicLevel] = useState(0);
   const smoothedLevelRef = useRef(0);
+  const [micUsers, setMicUsers] = useState<string[]>([]);
+
+  const refreshMicUsers = useCallback(async () => {
+    try {
+      const users = await invoke<string[]>("get_microphone_users");
+      setMicUsers(users);
+    } catch (e) {
+      console.error("get_microphone_users failed:", e);
+    }
+  }, []);
 
   const fetchStatus = useCallback(async () => {
     try {
@@ -90,6 +100,16 @@ export const SpeechMikeSettings: React.FC = () => {
     if (!connected) setIsMicTesting(false);
   }, [connected]);
 
+  // Refresh the "other apps using the microphone" list on connect and
+  // periodically while the section is visible (session enumeration is cheap).
+  useEffect(() => {
+    void refreshMicUsers();
+    const interval = setInterval(() => {
+      void refreshMicUsers();
+    }, 15000);
+    return () => clearInterval(interval);
+  }, [connected, refreshMicUsers]);
+
   if (!status) return null;
   if (!status.supported_platform) return null;
 
@@ -103,6 +123,15 @@ export const SpeechMikeSettings: React.FC = () => {
       setIsMicTesting(true);
     } catch (e) {
       console.error("start_mic_test failed:", e);
+    }
+  };
+
+  const handleAudioRestart = async () => {
+    setIsMicTesting(false);
+    try {
+      await invoke("restart_audio_stack");
+    } catch (e) {
+      console.error("restart_audio_stack failed:", e);
     }
   };
 
@@ -154,6 +183,19 @@ export const SpeechMikeSettings: React.FC = () => {
             : t("settings.general.speechmike.disconnected")}
         </span>
       </SettingContainer>
+
+      {micUsers.length > 0 && (
+        <div className="px-4 py-3 bg-amber-50 border-t border-amber-200">
+          <p className="text-sm font-medium text-amber-800">
+            {t("settings.general.speechmike.micUsersTitle")}
+          </p>
+          <p className="text-xs text-amber-700 mt-1">
+            {t("settings.general.speechmike.micUsers", {
+              processes: micUsers.join(", "),
+            })}
+          </p>
+        </div>
+      )}
 
       {status.blocked_by_other_app && (
         <div className="px-4 py-3 bg-amber-50 border-t border-amber-200">
@@ -270,6 +312,16 @@ export const SpeechMikeSettings: React.FC = () => {
               {isMicTesting
                 ? t("settings.general.speechmike.micTest.stop")
                 : t("settings.general.speechmike.micTest.start")}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                void handleAudioRestart();
+              }}
+              title={t("settings.general.speechmike.audioRestart.description")}
+              className="rounded px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
+            >
+              {t("settings.general.speechmike.audioRestart.button")}
             </button>
           </div>
         </SettingContainer>

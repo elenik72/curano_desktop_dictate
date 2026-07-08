@@ -221,7 +221,13 @@
           "description": "Speak into the SpeechMike to check the input level. Nothing is recorded.",
           "start": "Test",
           "stop": "Stop"
-        }
+        },
+        "audioRestart": {
+          "button": "Restart audio",
+          "description": "Fully restarts audio capture. Use when the microphone stopped delivering sound."
+        },
+        "micUsersTitle": "Other apps are using the microphone",
+        "micUsers": "Also capturing audio right now: {{processes}}. If dictation is silent, close them and press Restart audio."
       }
     },
     "transcriptionBackend": {
@@ -735,7 +741,10 @@
     "modelLoadFailed": "Failed to load model: {{model}}",
     "modelLoadFailedUnknown": "unknown model",
     "pasteFailedTitle": "Failed to Paste Text",
-    "pasteFailed": "Text could not be pasted into the active application."
+    "pasteFailed": "Text could not be pasted into the active application.",
+    "emptyRecordingTitle": "Nothing was transcribed",
+    "emptyRecordingSilent": "The microphone delivered no audio. Check the input device and level, or use the microphone test in SpeechMike settings.",
+    "emptyRecordingUnrecognized": "Audio was captured but no speech was recognized. Try speaking louder or closer to the microphone."
   },
   "appLanguage": {
     "title": "Application Language",

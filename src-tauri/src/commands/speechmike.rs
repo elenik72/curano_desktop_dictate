@@ -16,6 +16,19 @@ pub fn get_speechmike_status(
     status
 }
 
+/// Processes with an active audio-capture session (Windows). Empty elsewhere.
+/// Lets the UI warn that another app is also using the microphone.
+#[tauri::command]
+#[specta::specta]
+pub async fn get_microphone_users() -> Result<Vec<String>, String> {
+    // COM enumeration + tasklist can take a moment; keep it off the main thread.
+    tauri::async_runtime::spawn_blocking(
+        crate::devices::audio_sessions::list_capture_session_processes,
+    )
+    .await
+    .map_err(|e| format!("microphone user scan failed: {e}"))
+}
+
 #[tauri::command]
 #[specta::specta]
 pub fn set_speechmike_auto_select(app: AppHandle, enabled: bool) -> Result<(), String> {
