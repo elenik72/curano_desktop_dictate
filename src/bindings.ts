@@ -833,6 +833,30 @@ async getClamshellMicrophone() : Promise<Result<string, string>> {
 async isRecording() : Promise<boolean> {
     return await TAURI_INVOKE("is_recording");
 },
+/**
+ * Open the microphone stream so `mic-level` events flow for the mic-test UI.
+ * No-op when the stream is already open (always-on mode or active recording).
+ */
+async startMicTest() : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("start_mic_test") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Stop the mic-test stream. Only closes the microphone when it is safe to do
+ * so (on-demand mode, no recording in progress).
+ */
+async stopMicTest() : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("stop_mic_test") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async getSpeechmikeStatus() : Promise<SpeechMikeStatus> {
     return await TAURI_INVOKE("get_speechmike_status");
 },

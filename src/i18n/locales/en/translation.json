@@ -215,7 +215,13 @@
         "actionCancel": "Cancel current recording",
         "actionPostProcess": "Record with AI post-processing",
         "actionTranscribePtt": "Start / stop recording (push-to-talk)",
-        "learnSpeechControl": "Learn about SpeechControl SDK (Windows)"
+        "learnSpeechControl": "Learn about SpeechControl SDK (Windows)",
+        "micTest": {
+          "title": "Microphone test",
+          "description": "Speak into the SpeechMike to check the input level. Nothing is recorded.",
+          "start": "Test",
+          "stop": "Stop"
+        }
       }
     },
     "transcriptionBackend": {

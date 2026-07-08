@@ -233,7 +233,13 @@
         "actionCancel": "Отменить текущую запись",
         "actionPostProcess": "Запись с AI-постобработкой",
         "actionTranscribePtt": "Начать / остановить запись (нажми-говори)",
-        "learnSpeechControl": "О SpeechControl SDK (Windows)"
+        "learnSpeechControl": "О SpeechControl SDK (Windows)",
+        "micTest": {
+          "title": "Тест микрофона",
+          "description": "Говорите в SpeechMike, чтобы проверить уровень сигнала. Запись не сохраняется.",
+          "start": "Тест",
+          "stop": "Стоп"
+        }
       }
     },
     "sound": {

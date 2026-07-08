@@ -12,6 +12,50 @@ use tauri::Manager;
 
 const STREAM_IDLE_TIMEOUT: Duration = Duration::from_secs(30);
 
+/// How long the open stream may go without delivering any audio callbacks
+/// before the watchdog considers it dead and reopens it. WASAPI/CoreAudio
+/// deliver buffers continuously (silence included), so a stall this long means
+/// the stream is broken (device re-enumerated, format changed, driver reset).
+const STREAM_STALL_TIMEOUT: Duration = Duration::from_secs(15);
+const STREAM_STALL_POLL_INTERVAL: Duration = Duration::from_secs(5);
+
+/// Lowercase alphabetic characters only. Strips the noise Windows adds to
+/// re-enumerated endpoints ("Microphone (2- Philips SpeechMike)") and survives
+/// legacy 31-char name truncation.
+fn normalize_device_name(name: &str) -> String {
+    name.to_lowercase()
+        .chars()
+        .filter(|c| c.is_alphabetic())
+        .collect()
+}
+
+/// Find the best match for `wanted` among device `names`.
+/// Order: exact match → normalized equality → normalized containment (guarded
+/// against short generic names like "microphone" matching everything).
+fn match_device_index(names: &[String], wanted: &str) -> Option<usize> {
+    if let Some(idx) = names.iter().position(|n| n == wanted) {
+        return Some(idx);
+    }
+
+    let wanted_norm = normalize_device_name(wanted);
+    if wanted_norm.is_empty() {
+        return None;
+    }
+
+    if let Some(idx) = names
+        .iter()
+        .position(|n| normalize_device_name(n) == wanted_norm)
+    {
+        return Some(idx);
+    }
+
+    names.iter().position(|n| {
+        let n_norm = normalize_device_name(n);
+        let shorter = n_norm.len().min(wanted_norm.len());
+        shorter > 10 && (n_norm.contains(&wanted_norm) || wanted_norm.contains(&n_norm))
+    })
+}
+
 fn set_mute(mute: bool) {
     // Expected behavior:
     // - Windows: works on most systems using standard audio drivers.
@@ -123,6 +167,7 @@ fn create_audio_recorder(
     vad_path: &str,
     app_handle: &tauri::AppHandle,
     recording_chunk_sender: Arc<Mutex<Option<LiveSttAudioSender>>>,
+    last_audio_activity: Arc<Mutex<Instant>>,
 ) -> Result<AudioRecorder, anyhow::Error> {
     let silero = SileroVad::new(vad_path, 0.3)
         .map_err(|e| anyhow::anyhow!("Failed to create SileroVad: {}", e))?;
@@ -137,6 +182,7 @@ fn create_audio_recorder(
         .with_level_callback({
             let app_handle = app_handle.clone();
             move |levels| {
+                *last_audio_activity.lock().unwrap() = Instant::now();
                 utils::emit_levels(&app_handle, &levels);
             }
         })
@@ -170,6 +216,7 @@ pub struct AudioRecordingManager {
     did_mute: Arc<Mutex<bool>>,
     close_generation: Arc<AtomicU64>,
     recording_chunk_sender: Arc<Mutex<Option<LiveSttAudioSender>>>,
+    last_audio_activity: Arc<Mutex<Instant>>,
 }
 
 impl AudioRecordingManager {
@@ -194,6 +241,7 @@ impl AudioRecordingManager {
             did_mute: Arc::new(Mutex::new(false)),
             close_generation: Arc::new(AtomicU64::new(0)),
             recording_chunk_sender: Arc::new(Mutex::new(None)),
+            last_audio_activity: Arc::new(Mutex::new(Instant::now())),
         };
 
         // Always-on?  Open immediately.
@@ -201,7 +249,53 @@ impl AudioRecordingManager {
             manager.start_microphone_stream()?;
         }
 
+        manager.spawn_stream_watchdog();
+
         Ok(manager)
+    }
+
+    /// Background watchdog: an open stream that stops delivering audio
+    /// callbacks (device re-enumerated, format changed, driver reset — common
+    /// on Windows with USB mics like the SpeechMike) is torn down silently by
+    /// the OS without a stream error. Detect the stall and reopen. Never
+    /// touches the stream mid-recording.
+    fn spawn_stream_watchdog(&self) {
+        let manager = self.clone();
+        std::thread::Builder::new()
+            .name("mic-stream-watchdog".to_string())
+            .spawn(move || loop {
+                std::thread::sleep(STREAM_STALL_POLL_INTERVAL);
+
+                // Hold the state lock across the check AND the reopen to
+                // serialize against try_start_recording (same pattern as
+                // schedule_lazy_close): a recording must not begin between the
+                // Idle check and the stream teardown.
+                let state = manager.state.lock().unwrap();
+                if !matches!(*state, RecordingState::Idle) {
+                    continue;
+                }
+                if !*manager.is_open.lock().unwrap() {
+                    continue;
+                }
+
+                let stalled_for = manager.last_audio_activity.lock().unwrap().elapsed();
+                if stalled_for < STREAM_STALL_TIMEOUT {
+                    continue;
+                }
+
+                warn!(
+                    "Microphone stream delivered no audio for {:?}; reopening stream",
+                    stalled_for
+                );
+                if let Err(e) = manager.update_selected_device() {
+                    error!("Stream watchdog failed to reopen microphone: {e}");
+                }
+                // Reset either way so a persistently broken device retries at
+                // STREAM_STALL_TIMEOUT cadence instead of every poll tick.
+                *manager.last_audio_activity.lock().unwrap() = Instant::now();
+                drop(state);
+            })
+            .expect("failed to spawn mic-stream-watchdog thread");
     }
 
     /* ---------- helper methods --------------------------------------------- */
@@ -222,7 +316,7 @@ impl AudioRecordingManager {
 
         // Find the device by name
         match list_input_devices() {
-            Ok(devices) => {
+            Ok(mut devices) => {
                 let available_names = devices
                     .iter()
                     .map(|d| {
@@ -238,17 +332,25 @@ impl AudioRecordingManager {
                     device_name, available_names
                 );
 
-                let selected = devices
-                    .into_iter()
-                    .find(|d| d.name == *device_name)
-                    .map(|d| d.device);
-                if selected.is_none() {
-                    warn!(
-                        "Selected microphone '{}' is not present in CPAL input devices; falling back to system default input",
-                        device_name
-                    );
+                let names: Vec<String> = devices.iter().map(|d| d.name.clone()).collect();
+                let selected =
+                    match_device_index(&names, device_name).map(|idx| devices.swap_remove(idx));
+                match &selected {
+                    Some(d) if d.name != *device_name => {
+                        warn!(
+                            "Selected microphone '{}' matched device '{}' by fuzzy name (Windows re-enumeration or truncated name)",
+                            device_name, d.name
+                        );
+                    }
+                    None => {
+                        warn!(
+                            "Selected microphone '{}' is not present in CPAL input devices; falling back to system default input",
+                            device_name
+                        );
+                    }
+                    _ => {}
                 }
-                selected
+                selected.map(|d| d.device)
             }
             Err(e) => {
                 debug!("Failed to list devices, using default: {}", e);
@@ -320,6 +422,7 @@ impl AudioRecordingManager {
                 vad_path.to_str().unwrap(),
                 &self.app_handle,
                 self.recording_chunk_sender.clone(),
+                self.last_audio_activity.clone(),
             )?);
         }
         Ok(())
@@ -382,6 +485,9 @@ impl AudioRecordingManager {
         }
 
         *open_flag = true;
+        // Fresh baseline for the stall watchdog: the first audio callback can
+        // lag stream.play() by seconds on USB/Bluetooth devices.
+        *self.last_audio_activity.lock().unwrap() = Instant::now();
         // This timing covers through cpal's stream.play() returning — i.e. the
         // point cpal surfaces as "stream running." It does NOT guarantee the
         // host audio device is producing samples yet; the first input callback
@@ -418,6 +524,20 @@ impl AudioRecordingManager {
 
         *open_flag = false;
         debug!("Microphone stream stopped");
+    }
+
+    /// Close the microphone stream only when it is safe: on-demand mode and no
+    /// active recording. Used by the mic-test UI so stopping a test never tears
+    /// down an always-on stream or an in-progress recording.
+    pub fn stop_microphone_stream_if_idle(&self) {
+        if !matches!(*self.mode.lock().unwrap(), MicrophoneMode::OnDemand) {
+            return;
+        }
+        if !matches!(*self.state.lock().unwrap(), RecordingState::Idle) {
+            return;
+        }
+        self.close_generation.fetch_add(1, Ordering::SeqCst);
+        self.stop_microphone_stream();
     }
 
     /* ---------- mode switching --------------------------------------------- */
@@ -634,5 +754,69 @@ impl AudioRecordingManager {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::match_device_index;
+
+    fn names(list: &[&str]) -> Vec<String> {
+        list.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn exact_match_wins() {
+        let devices = names(&["Built-in Microphone", "Microphone (Philips SpeechMike III)"]);
+        assert_eq!(
+            match_device_index(&devices, "Microphone (Philips SpeechMike III)"),
+            Some(1)
+        );
+    }
+
+    #[test]
+    fn matches_windows_reenumerated_name() {
+        let devices = names(&[
+            "Built-in Microphone",
+            "Microphone (2- Philips SpeechMike III)",
+        ]);
+        assert_eq!(
+            match_device_index(&devices, "Microphone (Philips SpeechMike III)"),
+            Some(1)
+        );
+    }
+
+    #[test]
+    fn matches_truncated_legacy_name() {
+        let devices = names(&["Built-in Microphone", "Microphone (Philips SpeechMike III)"]);
+        // Legacy WaveIn APIs truncate device names to 31 characters.
+        assert_eq!(
+            match_device_index(&devices, "Microphone (Philips SpeechMike "),
+            Some(1)
+        );
+    }
+
+    #[test]
+    fn generic_short_name_does_not_fuzzy_match() {
+        let devices = names(&["Microphone (Philips SpeechMike III)"]);
+        assert_eq!(match_device_index(&devices, "Microphone"), None);
+    }
+
+    #[test]
+    fn no_match_falls_through() {
+        let devices = names(&["Built-in Microphone"]);
+        assert_eq!(
+            match_device_index(&devices, "Microphone (Philips SpeechMike III)"),
+            None
+        );
+    }
+
+    #[test]
+    fn case_insensitive_normalized_match() {
+        let devices = names(&["MICROPHONE (PHILIPS SPEECHMIKE III)"]);
+        assert_eq!(
+            match_device_index(&devices, "Microphone (Philips SpeechMike III)"),
+            Some(0)
+        );
     }
 }

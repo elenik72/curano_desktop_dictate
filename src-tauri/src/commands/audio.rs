@@ -25,6 +25,25 @@ fn custom_sound_exists(app: &AppHandle, sound_type: &str) -> bool {
         .map_or(false, |path| path.exists())
 }
 
+/// Open the microphone stream so `mic-level` events flow for the mic-test UI.
+/// No-op when the stream is already open (always-on mode or active recording).
+#[tauri::command]
+#[specta::specta]
+pub fn start_mic_test(app: AppHandle) -> Result<(), String> {
+    let rm = app.state::<Arc<AudioRecordingManager>>();
+    rm.start_microphone_stream().map_err(|e| e.to_string())
+}
+
+/// Stop the mic-test stream. Only closes the microphone when it is safe to do
+/// so (on-demand mode, no recording in progress).
+#[tauri::command]
+#[specta::specta]
+pub fn stop_mic_test(app: AppHandle) -> Result<(), String> {
+    let rm = app.state::<Arc<AudioRecordingManager>>();
+    rm.stop_microphone_stream_if_idle();
+    Ok(())
+}
+
 #[tauri::command]
 #[specta::specta]
 pub fn check_custom_sounds(app: AppHandle) -> CustomSounds {

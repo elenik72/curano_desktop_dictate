@@ -440,6 +440,8 @@ pub fn run(cli_args: CliArgs) {
             commands::audio::set_clamshell_microphone,
             commands::audio::get_clamshell_microphone,
             commands::audio::is_recording,
+            commands::audio::start_mic_test,
+            commands::audio::stop_mic_test,
             commands::speechmike::get_speechmike_status,
             commands::speechmike::set_speechmike_auto_select,
             commands::speechmike::set_speechmike_button_mapping_enabled,

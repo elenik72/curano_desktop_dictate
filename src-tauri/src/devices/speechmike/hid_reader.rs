@@ -39,7 +39,9 @@ enum LastEmit {
 const DISCONNECT_GRACE: Duration = Duration::from_millis(1500);
 const AUDIO_READY_DELAY: Duration = Duration::from_secs(3);
 const AUDIO_SWITCH_RETRY_DELAY: Duration = Duration::from_secs(2);
-const AUDIO_SWITCH_ATTEMPTS: usize = 3;
+// 5 attempts × 2s retry + 3s initial delay ≈ 13s of coverage: Windows can
+// register the USB audio endpoint well after HID enumeration sees the device.
+const AUDIO_SWITCH_ATTEMPTS: usize = 5;
 
 /// Entry point for the background HID polling thread. Runs forever.
 ///
