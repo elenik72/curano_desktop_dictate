@@ -16,7 +16,8 @@
     "history": "履歴",
     "debug": "デバッグ",
     "about": "概要",
-    "transcripts": "Transcripts"
+    "transcripts": "Transcripts",
+    "dictation": "音声コマンド"
   },
   "onboarding": {
     "subtitle": "開始するには、文字起こしモデルを選択してください",
@@ -684,7 +685,7 @@
     "transcripts": {
       "title": "Audio transcripts",
       "dropTitle": "Drag audio files here or click to choose",
-      "dropHint": "mp3, m4a, wav, ogg, flac and more · up to 10 files at once",
+      "dropHint": "mp3、m4a、wav、mp4 · 最大10ファイル · 各200 MBまで",
       "dropOverlay": "Drop audio files to upload",
       "filePickerFilter": "Audio files",
       "empty": "No uploads yet. Drop audio files here to get transcripts.",
@@ -700,6 +701,7 @@
       "retry": "Retry",
       "delete": "Delete",
       "deleteConfirm": "Delete this audio and its transcript?",
+      "deleteLocalConfirm": "この録音をリストから削除しますか?文字起こしはサーバーに残ります。",
       "readyToast": "{{name}} — transcript ready",
       "failedToast": "{{name}} — transcription failed",
       "status": {
@@ -722,7 +724,74 @@
         "transcription_failed": "Transcription failed",
         "consultation_deleted": "Deleted on the server",
         "deleteFailed": "Failed to delete. Try again.",
-        "audioUnavailable": "Audio is not available yet"
+        "audioUnavailable": "Audio is not available yet",
+        "file_too_large": "ファイルが200 MBの上限を超えています",
+        "job_deleted": "サーバーで削除されました"
+      }
+    },
+    "dictation": {
+      "title": "音声コマンド",
+      "addCommand": "コマンドを追加",
+      "authRequired": "コマンドを管理するには、一般設定で文字起こしサーバーにサインインしてください。",
+      "searchPlaceholder": "コマンドやフレーズを検索...",
+      "filters": {
+        "allSources": "すべてのコマンド",
+        "allTypes": "すべての種類",
+        "allLanguages": "すべての言語"
+      },
+      "total": "合計: {{count}}",
+      "loading": "読み込み中...",
+      "empty": "見つかりませんでした",
+      "loadMore": "さらに表示",
+      "badge": {
+        "global": "標準",
+        "user": "自分"
+      },
+      "phraseCount": "{{enabled}}/{{total}} フレーズ",
+      "disableCommand": "自分用に無効化",
+      "enableCommand": "有効化",
+      "delete": "コマンドを削除",
+      "deleteCommandConfirm": "コマンド「{{name}}」をすべてのフレーズと共に削除しますか?",
+      "deleted": "コマンドを削除しました",
+      "edit": "編集",
+      "save": "保存",
+      "saving": "保存中...",
+      "cancel": "キャンセル",
+      "create": "作成",
+      "created": "コマンドを作成しました",
+      "createTitle": "新しいコマンド",
+      "form": {
+        "name": "コマンド名",
+        "replacement": "置換テキスト",
+        "phrases": "音声フレーズ(1つ以上)"
+      },
+      "phrasePlaceholder": "音声フレーズ(例:「改行」)",
+      "addPhrase": "追加",
+      "addPhraseRow": "フレーズを追加",
+      "disablePhrase": "フレーズを自分用に無効化",
+      "enablePhrase": "フレーズを有効化",
+      "deletePhrase": "フレーズを削除",
+      "opType": {
+        "insert_text": "テキスト挿入",
+        "opening_mark": "開き記号",
+        "closing_mark": "閉じ記号",
+        "sentence_terminator": "文末",
+        "toggle_mark": "対記号",
+        "newline": "改行",
+        "paragraph": "新しい段落"
+      },
+      "opTypeHint": {
+        "insert_text": "テキストを独立した単語またはブロックとして挿入します。",
+        "opening_mark": "記号は次の単語に付きます(例: 開き括弧)。",
+        "closing_mark": "記号は前の単語に付きます(例: カンマや閉じ括弧)。",
+        "sentence_terminator": "文を終了し、次の単語は大文字で始まります。",
+        "toggle_mark": "対になる記号を交互に開閉します(例: 引用符)。",
+        "newline": "新しい行を開始します。置換テキストは不要です。",
+        "paragraph": "新しい段落を開始します。置換テキストは不要です。"
+      },
+      "errors": {
+        "duplicate": "そのフレーズは既に存在します",
+        "generic": "問題が発生しました。もう一度お試しください。"
       }
     }
   },

@@ -32,11 +32,10 @@ pub fn uploads_retry(manager: State<'_, Arc<UploadsManager>>, id: String) -> Res
     manager.retry(&id)
 }
 
+/// Remove an entry from the local list; the server-side transcription job
+/// is not deleted (the jobs API has no delete endpoint).
 #[tauri::command]
 #[specta::specta]
-pub async fn uploads_delete(
-    manager: State<'_, Arc<UploadsManager>>,
-    id: String,
-) -> Result<(), String> {
-    manager.delete(&id).await
+pub fn uploads_delete(manager: State<'_, Arc<UploadsManager>>, id: String) -> Result<(), String> {
+    manager.delete(&id)
 }

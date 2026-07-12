@@ -16,7 +16,8 @@
     "history": "Geçmiş",
     "debug": "Hata Ayıklama",
     "about": "Hakkında",
-    "transcripts": "Transcripts"
+    "transcripts": "Transcripts",
+    "dictation": "Sesli komutlar"
   },
   "onboarding": {
     "subtitle": "Başlamak için bir transkripsiyon modeli seçin",
@@ -684,7 +685,7 @@
     "transcripts": {
       "title": "Audio transcripts",
       "dropTitle": "Drag audio files here or click to choose",
-      "dropHint": "mp3, m4a, wav, ogg, flac and more · up to 10 files at once",
+      "dropHint": "mp3, m4a, wav, mp4 · en fazla 10 dosya · her biri en fazla 200 MB",
       "dropOverlay": "Drop audio files to upload",
       "filePickerFilter": "Audio files",
       "empty": "No uploads yet. Drop audio files here to get transcripts.",
@@ -700,6 +701,7 @@
       "retry": "Retry",
       "delete": "Delete",
       "deleteConfirm": "Delete this audio and its transcript?",
+      "deleteLocalConfirm": "Bu kayıt listeden kaldırılsın mı? Transkript sunucuda kalır.",
       "readyToast": "{{name}} — transcript ready",
       "failedToast": "{{name}} — transcription failed",
       "status": {
@@ -722,7 +724,74 @@
         "transcription_failed": "Transcription failed",
         "consultation_deleted": "Deleted on the server",
         "deleteFailed": "Failed to delete. Try again.",
-        "audioUnavailable": "Audio is not available yet"
+        "audioUnavailable": "Audio is not available yet",
+        "file_too_large": "Dosya 200 MB sınırını aşıyor",
+        "job_deleted": "Sunucuda silindi"
+      }
+    },
+    "dictation": {
+      "title": "Sesli komutlar",
+      "addCommand": "Komut ekle",
+      "authRequired": "Komutları yönetmek için genel ayarlardan transkripsiyon sunucusuna giriş yapın.",
+      "searchPlaceholder": "Komut ve ifade ara...",
+      "filters": {
+        "allSources": "Tüm komutlar",
+        "allTypes": "Tüm türler",
+        "allLanguages": "Tüm diller"
+      },
+      "total": "Toplam: {{count}}",
+      "loading": "Yükleniyor...",
+      "empty": "Bir şey bulunamadı",
+      "loadMore": "Daha fazla göster",
+      "badge": {
+        "global": "Standart",
+        "user": "Benim"
+      },
+      "phraseCount": "{{enabled}}/{{total}} ifade",
+      "disableCommand": "Benim için devre dışı bırak",
+      "enableCommand": "Etkinleştir",
+      "delete": "Komutu sil",
+      "deleteCommandConfirm": "“{{name}}” komutu tüm ifadeleriyle birlikte silinsin mi?",
+      "deleted": "Komut silindi",
+      "edit": "Düzenle",
+      "save": "Kaydet",
+      "saving": "Kaydediliyor...",
+      "cancel": "İptal",
+      "create": "Oluştur",
+      "created": "Komut oluşturuldu",
+      "createTitle": "Yeni komut",
+      "form": {
+        "name": "Komut adı",
+        "replacement": "Değiştirme metni",
+        "phrases": "Sesli ifadeler (en az bir)"
+      },
+      "phrasePlaceholder": "Sesli ifade, örn. “yeni satır”",
+      "addPhrase": "Ekle",
+      "addPhraseRow": "Başka ifade",
+      "disablePhrase": "İfadeyi benim için devre dışı bırak",
+      "enablePhrase": "İfadeyi etkinleştir",
+      "deletePhrase": "İfadeyi sil",
+      "opType": {
+        "insert_text": "Metin ekle",
+        "opening_mark": "Açılış işareti",
+        "closing_mark": "Kapanış işareti",
+        "sentence_terminator": "Cümle sonu",
+        "toggle_mark": "Eşli işaret",
+        "newline": "Yeni satır",
+        "paragraph": "Yeni paragraf"
+      },
+      "opTypeHint": {
+        "insert_text": "Metni ayrı bir sözcük veya blok olarak ekler.",
+        "opening_mark": "İşaret sonraki sözcüğe yapışır, örn. açılış parantezi.",
+        "closing_mark": "İşaret önceki sözcüğe yapışır, örn. virgül veya kapanış parantezi.",
+        "sentence_terminator": "Cümleyi bitirir; sonraki sözcük büyük harfle başlar.",
+        "toggle_mark": "Eşli işareti sırayla açar ve kapatır, örn. tırnak işaretleri.",
+        "newline": "Yeni satır başlatır. Değiştirme metni gerekmez.",
+        "paragraph": "Yeni paragraf başlatır. Değiştirme metni gerekmez."
+      },
+      "errors": {
+        "duplicate": "Böyle bir ifade zaten var",
+        "generic": "Bir şeyler ters gitti. Tekrar deneyin."
       }
     }
   },

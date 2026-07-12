@@ -15,6 +15,7 @@
     "postProcessing": "Nachbearbeitung",
     "history": "Verlauf",
     "transcripts": "Transkripte",
+    "dictation": "Sprachbefehle",
     "debug": "Debug",
     "about": "Info"
   },
@@ -474,7 +475,7 @@
     "transcripts": {
       "title": "Audio-Transkripte",
       "dropTitle": "Audiodateien hierher ziehen oder klicken zum Auswählen",
-      "dropHint": "mp3, m4a, wav, ogg, flac und mehr · bis zu 10 Dateien auf einmal",
+      "dropHint": "mp3, m4a, wav, mp4 · bis zu 10 Dateien · je bis zu 200 MB",
       "dropOverlay": "Dateien zum Hochladen ablegen",
       "filePickerFilter": "Audiodateien",
       "empty": "Noch keine Uploads. Audiodateien hierher ziehen, um Transkripte zu erhalten.",
@@ -490,6 +491,7 @@
       "retry": "Wiederholen",
       "delete": "Löschen",
       "deleteConfirm": "Dieses Audio und sein Transkript löschen?",
+      "deleteLocalConfirm": "Diese Aufnahme aus der Liste entfernen? Das Transkript bleibt auf dem Server.",
       "readyToast": "{{name}} — Transkript fertig",
       "failedToast": "{{name}} — Transkription fehlgeschlagen",
       "status": {
@@ -512,7 +514,74 @@
         "transcription_failed": "Transkription fehlgeschlagen",
         "consultation_deleted": "Auf dem Server gelöscht",
         "deleteFailed": "Löschen fehlgeschlagen. Versuchen Sie es erneut.",
-        "audioUnavailable": "Audio ist noch nicht verfügbar"
+        "audioUnavailable": "Audio ist noch nicht verfügbar",
+        "file_too_large": "Datei überschreitet das 200-MB-Limit",
+        "job_deleted": "Auf dem Server gelöscht"
+      }
+    },
+    "dictation": {
+      "title": "Sprachbefehle",
+      "addCommand": "Befehl hinzufügen",
+      "authRequired": "Melden Sie sich in den allgemeinen Einstellungen am Transkriptionsserver an, um Befehle zu verwalten.",
+      "searchPlaceholder": "Befehle und Phrasen suchen...",
+      "filters": {
+        "allSources": "Alle Befehle",
+        "allTypes": "Alle Typen",
+        "allLanguages": "Alle Sprachen"
+      },
+      "total": "Gesamt: {{count}}",
+      "loading": "Wird geladen...",
+      "empty": "Nichts gefunden",
+      "loadMore": "Mehr anzeigen",
+      "badge": {
+        "global": "Standard",
+        "user": "Eigene"
+      },
+      "phraseCount": "{{enabled}}/{{total}} Phrasen",
+      "disableCommand": "Für mich deaktivieren",
+      "enableCommand": "Aktivieren",
+      "delete": "Befehl löschen",
+      "deleteCommandConfirm": "Befehl „{{name}}“ mit allen Phrasen löschen?",
+      "deleted": "Befehl gelöscht",
+      "edit": "Bearbeiten",
+      "save": "Speichern",
+      "saving": "Wird gespeichert...",
+      "cancel": "Abbrechen",
+      "create": "Erstellen",
+      "created": "Befehl erstellt",
+      "createTitle": "Neuer Befehl",
+      "form": {
+        "name": "Befehlsname",
+        "replacement": "Ersetzungstext",
+        "phrases": "Sprachphrasen (mindestens eine)"
+      },
+      "phrasePlaceholder": "Sprachphrase, z. B. „neue Zeile“",
+      "addPhrase": "Hinzufügen",
+      "addPhraseRow": "Weitere Phrase",
+      "disablePhrase": "Phrase für mich deaktivieren",
+      "enablePhrase": "Phrase aktivieren",
+      "deletePhrase": "Phrase löschen",
+      "opType": {
+        "insert_text": "Text einfügen",
+        "opening_mark": "Öffnendes Zeichen",
+        "closing_mark": "Schließendes Zeichen",
+        "sentence_terminator": "Satzende",
+        "toggle_mark": "Paarzeichen",
+        "newline": "Neue Zeile",
+        "paragraph": "Neuer Absatz"
+      },
+      "opTypeHint": {
+        "insert_text": "Fügt den Text als eigenes Wort oder als Block ein.",
+        "opening_mark": "Das Zeichen wird an das nächste Wort angefügt, z. B. eine öffnende Klammer.",
+        "closing_mark": "Das Zeichen wird an das vorherige Wort angefügt, z. B. Komma oder schließende Klammer.",
+        "sentence_terminator": "Beendet den Satz; das nächste Wort beginnt großgeschrieben.",
+        "toggle_mark": "Öffnet und schließt abwechselnd ein Paarzeichen, z. B. Anführungszeichen.",
+        "newline": "Beginnt eine neue Zeile. Kein Ersetzungstext nötig.",
+        "paragraph": "Beginnt einen neuen Absatz. Kein Ersetzungstext nötig."
+      },
+      "errors": {
+        "duplicate": "Diese Phrase existiert bereits",
+        "generic": "Etwas ist schiefgelaufen. Versuchen Sie es erneut."
       }
     },
     "debug": {

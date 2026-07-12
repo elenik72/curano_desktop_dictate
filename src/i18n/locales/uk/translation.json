@@ -16,7 +16,8 @@
     "history": "Історія",
     "debug": "Дебаг",
     "about": "Інфо",
-    "transcripts": "Transcripts"
+    "transcripts": "Transcripts",
+    "dictation": "Голосові команди"
   },
   "onboarding": {
     "subtitle": "Для початку оберіть модель транскрипції",
@@ -684,7 +685,7 @@
     "transcripts": {
       "title": "Audio transcripts",
       "dropTitle": "Drag audio files here or click to choose",
-      "dropHint": "mp3, m4a, wav, ogg, flac and more · up to 10 files at once",
+      "dropHint": "mp3, m4a, wav, mp4 · до 10 файлів · до 200 МБ кожен",
       "dropOverlay": "Drop audio files to upload",
       "filePickerFilter": "Audio files",
       "empty": "No uploads yet. Drop audio files here to get transcripts.",
@@ -700,6 +701,7 @@
       "retry": "Retry",
       "delete": "Delete",
       "deleteConfirm": "Delete this audio and its transcript?",
+      "deleteLocalConfirm": "Прибрати цей запис зі списку? Транскрипт залишиться на сервері.",
       "readyToast": "{{name}} — transcript ready",
       "failedToast": "{{name}} — transcription failed",
       "status": {
@@ -722,7 +724,74 @@
         "transcription_failed": "Transcription failed",
         "consultation_deleted": "Deleted on the server",
         "deleteFailed": "Failed to delete. Try again.",
-        "audioUnavailable": "Audio is not available yet"
+        "audioUnavailable": "Audio is not available yet",
+        "file_too_large": "Файл перевищує ліміт 200 МБ",
+        "job_deleted": "Видалено на сервері"
+      }
+    },
+    "dictation": {
+      "title": "Голосові команди",
+      "addCommand": "Додати команду",
+      "authRequired": "Увійдіть на сервер транскрипції в загальних налаштуваннях, щоб керувати командами.",
+      "searchPlaceholder": "Пошук команд і фраз...",
+      "filters": {
+        "allSources": "Усі команди",
+        "allTypes": "Усі типи",
+        "allLanguages": "Усі мови"
+      },
+      "total": "Усього: {{count}}",
+      "loading": "Завантаження...",
+      "empty": "Нічого не знайдено",
+      "loadMore": "Показати ще",
+      "badge": {
+        "global": "Стандартна",
+        "user": "Моя"
+      },
+      "phraseCount": "{{enabled}}/{{total}} фраз",
+      "disableCommand": "Вимкнути для себе",
+      "enableCommand": "Увімкнути",
+      "delete": "Видалити команду",
+      "deleteCommandConfirm": "Видалити команду «{{name}}» з усіма фразами?",
+      "deleted": "Команду видалено",
+      "edit": "Редагувати",
+      "save": "Зберегти",
+      "saving": "Збереження...",
+      "cancel": "Скасувати",
+      "create": "Створити",
+      "created": "Команду створено",
+      "createTitle": "Нова команда",
+      "form": {
+        "name": "Назва команди",
+        "replacement": "Текст заміни",
+        "phrases": "Голосові фрази (принаймні одна)"
+      },
+      "phrasePlaceholder": "Голосова фраза, напр. «новий рядок»",
+      "addPhrase": "Додати",
+      "addPhraseRow": "Ще фраза",
+      "disablePhrase": "Вимкнути фразу для себе",
+      "enablePhrase": "Увімкнути фразу",
+      "deletePhrase": "Видалити фразу",
+      "opType": {
+        "insert_text": "Вставлення тексту",
+        "opening_mark": "Відкривний знак",
+        "closing_mark": "Закривний знак",
+        "sentence_terminator": "Кінець речення",
+        "toggle_mark": "Парний знак",
+        "newline": "Новий рядок",
+        "paragraph": "Новий абзац"
+      },
+      "opTypeHint": {
+        "insert_text": "Вставляє текст окремим словом або блоком.",
+        "opening_mark": "Знак приклеюється до наступного слова, напр. відкривна дужка.",
+        "closing_mark": "Знак приклеюється до попереднього слова, напр. кома або закривна дужка.",
+        "sentence_terminator": "Завершує речення; наступне слово починається з великої літери.",
+        "toggle_mark": "По черзі відкриває та закриває парний знак, напр. лапки.",
+        "newline": "Починає новий рядок. Текст заміни не потрібен.",
+        "paragraph": "Починає новий абзац. Текст заміни не потрібен."
+      },
+      "errors": {
+        "duplicate": "Така фраза вже існує",
+        "generic": "Щось пішло не так. Спробуйте ще раз."
       }
     }
   },

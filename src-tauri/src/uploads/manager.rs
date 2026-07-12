@@ -1,29 +1,34 @@
 //! Upload queue, persistence and server-status polling.
 //!
-//! Files upload through a semaphore (max 3 in parallel, Drive-style queue).
-//! Every entry gets its own consultation on the Curano backend; after the
-//! signed-url PUT succeeds the server transcribes on its own and a poller
-//! watches `GET /audios` until the status turns terminal.
+//! Files upload through a semaphore (max 3 in parallel, Drive-style queue)
+//! straight to the standalone `POST /api/transcriptions` endpoint — no
+//! consultation or patient involved. A poller then watches
+//! `GET /api/transcriptions/{job_id}` until the status turns terminal.
+//! There is no server-side delete for jobs, so removing an entry is local.
 
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use serde_json::Value;
 use tauri::AppHandle;
 use tauri_plugin_store::StoreExt;
 use tauri_specta::Event;
 use tokio_util::sync::CancellationToken;
 
-use super::api::{self, ApiCtx, CreateConsultationError, DEFAULT_PATIENT_ID};
+use super::api::{self, MAX_UPLOAD_BYTES};
 use super::types::{UploadEntry, UploadProgressPayload, UploadStatus, UploadsChangedPayload};
 
 const UPLOADS_STORE_PATH: &str = "uploads_store.json";
 const UPLOADS_ENTRIES_KEY: &str = "entries";
-const UPLOADS_PATIENT_KEY: &str = "patient_id";
+/// Leftover from the consultation-based flow; cleaned up on startup.
+const UPLOADS_LEGACY_PATIENT_KEY: &str = "patient_id";
 const MAX_PARALLEL_UPLOADS: usize = 3;
-const POLL_INTERVAL: Duration = Duration::from_secs(4);
+const POLL_INTERVAL: Duration = Duration::from_secs(3);
+/// Spoken-punctuation formatting: plain text without timecodes.
+const DICTATION_MODE: bool = true;
+/// Total attempts for one upload before it is marked failed.
+const UPLOAD_ATTEMPTS: u32 = 3;
 
 static ENTRY_SEQ: AtomicU64 = AtomicU64::new(0);
 
@@ -46,14 +51,23 @@ impl UploadsManager {
     pub fn new(app: AppHandle) -> Arc<Self> {
         let mut entries = load_entries(&app);
 
-        // Uploads killed mid-flight by an app restart cannot resume: the
-        // signed URL is gone. Mark them failed so the user can retry.
         for entry in entries.iter_mut() {
-            if matches!(entry.status, UploadStatus::Queued | UploadStatus::Uploading) {
+            // Uploads killed mid-flight by an app restart cannot resume.
+            // Entries from the old consultation-based flow have no job_id
+            // and cannot be polled either. Both become retryable failures.
+            let interrupted =
+                matches!(entry.status, UploadStatus::Queued | UploadStatus::Uploading)
+                    || (entry.status == UploadStatus::Processing && entry.job_id.is_none());
+
+            if interrupted {
                 entry.status = UploadStatus::Failed;
                 entry.error = Some("interrupted".to_string());
                 entry.progress = 0;
             }
+        }
+
+        if let Ok(store) = app.store(crate::portable::store_path(UPLOADS_STORE_PATH)) {
+            store.delete(UPLOADS_LEGACY_PATIENT_KEY);
         }
 
         let manager = Arc::new(Self {
@@ -122,24 +136,6 @@ impl UploadsManager {
             .retain(|e| e.id != id);
     }
 
-    fn cached_patient_id(&self) -> i64 {
-        self.app
-            .store(crate::portable::store_path(UPLOADS_STORE_PATH))
-            .ok()
-            .and_then(|store| store.get(UPLOADS_PATIENT_KEY))
-            .and_then(|v| v.as_i64())
-            .unwrap_or(DEFAULT_PATIENT_ID)
-    }
-
-    fn cache_patient_id(&self, patient_id: i64) {
-        if let Ok(store) = self
-            .app
-            .store(crate::portable::store_path(UPLOADS_STORE_PATH))
-        {
-            store.set(UPLOADS_PATIENT_KEY, Value::from(patient_id));
-        }
-    }
-
     /// Validate paths and enqueue them. Returns an error only when nothing
     /// could be enqueued.
     pub fn add_files(self: &Arc<Self>, paths: Vec<String>) -> Result<(), String> {
@@ -151,6 +147,7 @@ impl UploadsManager {
         }
 
         let mut new_ids = Vec::new();
+        let mut added_any = false;
 
         for path in paths {
             let file_name = std::path::Path::new(&path)
@@ -169,28 +166,38 @@ impl UploadsManager {
                 continue;
             }
 
+            // Oversized files become visible failed entries instead of
+            // silently disappearing.
+            let too_large = size_bytes > MAX_UPLOAD_BYTES;
+
             let entry = UploadEntry {
                 id: next_entry_id(),
                 file_name,
                 source_path: Some(path),
                 size_bytes: size_bytes.min(u32::MAX as u64) as u32,
-                consultation_id: None,
-                audio_id: None,
+                job_id: None,
                 created_at_ms: chrono::Utc::now().timestamp_millis(),
-                status: UploadStatus::Queued,
+                status: if too_large {
+                    UploadStatus::Failed
+                } else {
+                    UploadStatus::Queued
+                },
                 progress: 0,
                 transcript: None,
-                error: None,
+                error: too_large.then(|| "file_too_large".to_string()),
             };
 
-            new_ids.push(entry.id.clone());
+            if !too_large {
+                new_ids.push(entry.id.clone());
+            }
+            added_any = true;
             self.entries
                 .lock()
                 .expect("uploads state poisoned")
                 .insert(0, entry);
         }
 
-        if new_ids.is_empty() {
+        if !added_any {
             return Err("unsupported_files".to_string());
         }
 
@@ -219,22 +226,10 @@ impl UploadsManager {
             .filter(|p| std::path::Path::new(p).exists())
             .ok_or_else(|| "source_missing".to_string())?;
 
-        // The retry uploads into a fresh consultation; drop the old one so
-        // failed attempts don't pile up server-side.
-        if let Some(old_consultation) = entry.consultation_id {
-            let app = self.app.clone();
-            tauri::async_runtime::spawn(async move {
-                if let Ok(ctx) = api::api_ctx(&app).await {
-                    let _ = ctx.delete_consultation(old_consultation).await;
-                }
-            });
-        }
-
         self.update_entry(id, |e| {
             e.status = UploadStatus::Queued;
             e.progress = 0;
-            e.consultation_id = None;
-            e.audio_id = None;
+            e.job_id = None;
             e.transcript = None;
             e.error = None;
         });
@@ -266,34 +261,18 @@ impl UploadsManager {
         self.remove_entry(id);
         self.persist();
         self.emit_changed();
-
-        // The pipeline may already have created the container consultation.
-        if let Some(consultation_id) = entry.consultation_id {
-            let app = self.app.clone();
-            tauri::async_runtime::spawn(async move {
-                if let Ok(ctx) = api::api_ctx(&app).await {
-                    let _ = ctx.delete_consultation(consultation_id).await;
-                }
-            });
-        }
-
         Ok(())
     }
 
-    /// Delete an entry and its server-side consultation (with the audio and
-    /// transcript in it).
-    pub async fn delete(&self, id: &str) -> Result<(), String> {
+    /// Remove an entry from the local list. The jobs API has no delete, so
+    /// the server-side job (and its transcript) stays untouched.
+    pub fn delete(&self, id: &str) -> Result<(), String> {
         let entry = self
             .entry_snapshot(id)
             .ok_or_else(|| "not_found".to_string())?;
 
         if matches!(entry.status, UploadStatus::Queued | UploadStatus::Uploading) {
             return self.cancel(id);
-        }
-
-        if let Some(consultation_id) = entry.consultation_id {
-            let ctx = api::api_ctx(&self.app).await?;
-            ctx.delete_consultation(consultation_id).await?;
         }
 
         self.remove_entry(id);
@@ -343,7 +322,7 @@ impl UploadsManager {
                 let targets: Vec<UploadEntry> = self
                     .entries()
                     .into_iter()
-                    .filter(|e| e.status == UploadStatus::Processing)
+                    .filter(|e| e.status == UploadStatus::Processing && e.job_id.is_some())
                     .collect();
 
                 if targets.is_empty() {
@@ -361,41 +340,34 @@ impl UploadsManager {
                 let mut changed = false;
 
                 for target in targets {
-                    let Some(consultation_id) = target.consultation_id else {
+                    let Some(job_id) = target.job_id else {
                         continue;
                     };
 
-                    match ctx.list_audios(consultation_id).await {
-                        Ok(audios) => {
-                            let audio = match target.audio_id {
-                                Some(audio_id) => audios.into_iter().find(|a| a.id == audio_id),
-                                None => audios.into_iter().next(),
-                            };
-
-                            let Some(audio) = audio else { continue };
-
-                            let new_status = match audio.status.as_str() {
+                    match ctx.get_transcription_job(job_id).await {
+                        Ok(job) => {
+                            let new_status = match job.status.as_str() {
                                 "completed" => UploadStatus::Completed,
-                                "reject" | "failed" => UploadStatus::Failed,
+                                "failed" | "deleted" => UploadStatus::Failed,
                                 _ => UploadStatus::Processing,
                             };
 
-                            let transcript = audio
+                            let transcript = job
                                 .transcription_text
                                 .as_deref()
                                 .map(strip_transcript_timestamps);
-                            let audio_id = audio.id;
 
                             self.update_entry(&target.id, |e| {
-                                if e.audio_id != Some(audio_id) {
-                                    e.audio_id = Some(audio_id);
-                                    changed = true;
-                                }
                                 if e.status != new_status {
                                     e.status = new_status;
                                     changed = true;
                                     if new_status == UploadStatus::Failed {
-                                        e.error = Some("transcription_failed".to_string());
+                                        e.error = Some(match job.status.as_str() {
+                                            "deleted" => "job_deleted".to_string(),
+                                            _ => job.error_message.clone().unwrap_or_else(|| {
+                                                "transcription_failed".to_string()
+                                            }),
+                                        });
                                     }
                                 }
                                 if new_status == UploadStatus::Completed
@@ -406,19 +378,15 @@ impl UploadsManager {
                                 }
                             });
                         }
-                        Err(e) if e == "consultation_not_found" => {
+                        Err(e) if e == "job_not_found" => {
                             self.update_entry(&target.id, |entry| {
                                 entry.status = UploadStatus::Failed;
-                                entry.error = Some("consultation_deleted".to_string());
+                                entry.error = Some("job_deleted".to_string());
                             });
                             changed = true;
                         }
                         Err(e) => {
-                            log::debug!(
-                                "Uploads poll for consultation {} failed: {}",
-                                consultation_id,
-                                e
-                            );
+                            log::debug!("Uploads poll for job {} failed: {}", job_id, e);
                         }
                     }
                 }
@@ -465,56 +433,76 @@ async fn run_pipeline(
     });
     manager.emit_changed();
 
-    let ctx = match api::api_ctx(&manager.app).await {
-        Ok(ctx) => ctx,
-        Err(e) => return PipelineOutcome::Failed(e),
-    };
+    // Transient network drops mid-body are common on multi-megabyte
+    // uploads; retry the whole POST a couple of times before giving up.
+    // Only transport errors retry — server rejections (4xx, size) fail fast.
+    let mut job_id = None;
+    for attempt in 1..=UPLOAD_ATTEMPTS {
+        let ctx = match api::api_ctx(&manager.app).await {
+            Ok(ctx) => ctx,
+            Err(e) => return PipelineOutcome::Failed(e),
+        };
 
-    let consultation_id = match create_consultation_with_fallback(manager, &ctx).await {
-        Ok(consultation_id) => consultation_id,
-        Err(e) => return PipelineOutcome::Failed(e),
-    };
+        let progress_app = manager.app.clone();
+        let progress_id = id.to_string();
+        let upload_result = ctx
+            .create_transcription_job(
+                &source_path,
+                &entry.file_name,
+                DICTATION_MODE,
+                move |pct| {
+                    let _ = (UploadProgressPayload {
+                        id: progress_id.clone(),
+                        progress: pct,
+                    })
+                    .emit(&progress_app);
+                },
+                token.clone(),
+            )
+            .await;
 
-    manager.update_entry(id, |e| e.consultation_id = Some(consultation_id));
-    manager.persist();
+        match upload_result {
+            Ok(created) => {
+                job_id = Some(created);
+                break;
+            }
+            Err(e) if e == "cancelled" => return PipelineOutcome::Cancelled,
+            Err(e) => {
+                let transient = e.starts_with("File upload failed:");
+                if !transient || attempt == UPLOAD_ATTEMPTS {
+                    return PipelineOutcome::Failed(e);
+                }
 
-    if token.is_cancelled() {
-        return PipelineOutcome::Cancelled;
-    }
+                let backoff = Duration::from_secs(2 * attempt as u64);
+                log::warn!(
+                    "Upload {} attempt {}/{} failed ({}); retrying in {:?}",
+                    id,
+                    attempt,
+                    UPLOAD_ATTEMPTS,
+                    e,
+                    backoff
+                );
 
-    let signed_url = match ctx
-        .create_upload_url(consultation_id, &entry.file_name)
-        .await
-    {
-        Ok(url) => url,
-        Err(e) => return PipelineOutcome::Failed(e),
-    };
-
-    let progress_app = manager.app.clone();
-    let progress_id = id.to_string();
-    let upload_result = ctx
-        .put_signed_url(
-            &signed_url,
-            &source_path,
-            api::content_type_for(&entry.file_name),
-            move |pct| {
                 let _ = (UploadProgressPayload {
-                    id: progress_id.clone(),
-                    progress: pct,
+                    id: id.to_string(),
+                    progress: 0,
                 })
-                .emit(&progress_app);
-            },
-            token.clone(),
-        )
-        .await;
+                .emit(&manager.app);
 
-    match upload_result {
-        Ok(()) => {}
-        Err(e) if e == "cancelled" => return PipelineOutcome::Cancelled,
-        Err(e) => return PipelineOutcome::Failed(e),
+                tokio::select! {
+                    _ = token.cancelled() => return PipelineOutcome::Cancelled,
+                    _ = tokio::time::sleep(backoff) => {}
+                }
+            }
+        }
     }
+
+    let Some(job_id) = job_id else {
+        return PipelineOutcome::Failed("Upload failed".to_string());
+    };
 
     manager.update_entry(id, |e| {
+        e.job_id = Some(job_id);
         e.status = UploadStatus::Processing;
         e.progress = 100;
     });
@@ -522,33 +510,6 @@ async fn run_pipeline(
     manager.emit_changed();
 
     PipelineOutcome::Done
-}
-
-async fn create_consultation_with_fallback(
-    manager: &Arc<UploadsManager>,
-    ctx: &ApiCtx,
-) -> Result<i64, String> {
-    let patient_id = manager.cached_patient_id();
-
-    match ctx.create_consultation(patient_id).await {
-        Ok(consultation_id) => Ok(consultation_id),
-        Err(CreateConsultationError::PatientRejected(reason)) => {
-            log::info!(
-                "Patient {} rejected ({}), creating technical patient",
-                patient_id,
-                reason
-            );
-            let new_patient = ctx.create_technical_patient().await?;
-            manager.cache_patient_id(new_patient);
-            ctx.create_consultation(new_patient)
-                .await
-                .map_err(|e| match e {
-                    CreateConsultationError::PatientRejected(msg)
-                    | CreateConsultationError::Other(msg) => msg,
-                })
-        }
-        Err(CreateConsultationError::Other(e)) => Err(e),
-    }
 }
 
 fn load_entries(app: &AppHandle) -> Vec<UploadEntry> {
