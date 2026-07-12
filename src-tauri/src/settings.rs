@@ -465,6 +465,8 @@ pub struct AppSettings {
     pub livestt_audio_format: LiveSttAudioFormat,
     #[serde(default)]
     pub livestt_consultation_id: Option<String>,
+    #[serde(default = "default_livestt_dictation_enabled")]
+    pub livestt_dictation_enabled: bool,
     #[serde(default = "default_livestt_finalize_timeout_ms")]
     pub livestt_finalize_timeout_ms: u64,
     #[serde(default = "default_livestt_preroll_ms")]
@@ -719,6 +721,10 @@ fn default_typing_tool() -> TypingTool {
 
 fn default_livestt_server_url() -> String {
     "https://api.curano.ch".to_string()
+}
+
+fn default_livestt_dictation_enabled() -> bool {
+    true
 }
 
 fn default_livestt_finalize_timeout_ms() -> u64 {
@@ -1102,6 +1108,7 @@ pub fn get_default_settings() -> AppSettings {
         livestt_server_url: default_livestt_server_url(),
         livestt_audio_format: LiveSttAudioFormat::default(),
         livestt_consultation_id: None,
+        livestt_dictation_enabled: default_livestt_dictation_enabled(),
         livestt_finalize_timeout_ms: default_livestt_finalize_timeout_ms(),
         livestt_preroll_ms: default_livestt_preroll_ms(),
         livestt_text: None,
@@ -1266,6 +1273,7 @@ mod tests {
         assert_eq!(settings.livestt_server_url, "https://api.curano.ch");
         assert_eq!(settings.livestt_audio_format, LiveSttAudioFormat::Pcm);
         assert_eq!(settings.livestt_consultation_id, None);
+        assert!(settings.livestt_dictation_enabled);
         assert_eq!(settings.livestt_finalize_timeout_ms, 15_000);
         assert_eq!(settings.livestt_preroll_ms, 500);
         assert_eq!(settings.livestt_text, None);
@@ -1281,6 +1289,7 @@ mod tests {
         object.remove("livestt_server_url");
         object.remove("livestt_audio_format");
         object.remove("livestt_consultation_id");
+        object.remove("livestt_dictation_enabled");
         object.remove("livestt_finalize_timeout_ms");
         object.remove("livestt_preroll_ms");
         object.remove("livestt_text");
@@ -1296,6 +1305,7 @@ mod tests {
         assert_eq!(settings.livestt_server_url, "https://api.curano.ch");
         assert_eq!(settings.livestt_audio_format, LiveSttAudioFormat::Pcm);
         assert_eq!(settings.livestt_consultation_id, None);
+        assert!(settings.livestt_dictation_enabled);
         assert_eq!(settings.livestt_finalize_timeout_ms, 15_000);
         assert_eq!(settings.livestt_preroll_ms, 500);
         assert_eq!(settings.livestt_text, None);

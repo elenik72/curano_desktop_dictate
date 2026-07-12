@@ -14,6 +14,7 @@
     "advanced": "Продвинутые",
     "postProcessing": "Постобработка",
     "history": "История",
+    "transcripts": "Транскрипты",
     "debug": "Отладка",
     "about": "О программе"
   },
@@ -233,7 +234,19 @@
         "actionCancel": "Отменить текущую запись",
         "actionPostProcess": "Запись с AI-постобработкой",
         "actionTranscribePtt": "Начать / остановить запись (нажми-говори)",
-        "learnSpeechControl": "О SpeechControl SDK (Windows)"
+        "learnSpeechControl": "О SpeechControl SDK (Windows)",
+        "micTest": {
+          "title": "Тест микрофона",
+          "description": "Говорите в SpeechMike, чтобы проверить уровень сигнала. Запись не сохраняется.",
+          "start": "Тест",
+          "stop": "Стоп"
+        },
+        "audioRestart": {
+          "button": "Перезапустить аудио",
+          "description": "Полностью перезапускает захват звука. Используйте, если микрофон перестал давать сигнал."
+        },
+        "micUsersTitle": "Микрофон используют другие приложения",
+        "micUsers": "Прямо сейчас звук также захватывают: {{processes}}. Если диктовка молчит — закройте их и нажмите «Перезапустить аудио»."
       }
     },
     "sound": {
@@ -458,6 +471,50 @@
         "livestt": "LiveSTT"
       }
     },
+    "transcripts": {
+      "title": "Транскрипты аудио",
+      "dropTitle": "Перетащите аудиофайлы сюда или нажмите для выбора",
+      "dropHint": "mp3, m4a, wav, ogg, flac и другие · до 10 файлов за раз",
+      "dropOverlay": "Отпустите файлы для загрузки",
+      "filePickerFilter": "Аудиофайлы",
+      "empty": "Пока пусто. Перетащите аудиофайлы, чтобы получить транскрипты.",
+      "noTranscript": "Транскрипт ещё не готов — аудио уже можно слушать.",
+      "authRequired": "Войдите на сервер транскрипции в разделе «Основные», чтобы загружать аудио.",
+      "copy": "Копировать",
+      "copied": "Транскрипт скопирован",
+      "fullscreen": "Развернуть",
+      "expand": "Показать транскрипт",
+      "collapse": "Скрыть транскрипт",
+      "close": "Закрыть",
+      "cancel": "Отменить загрузку",
+      "retry": "Повторить",
+      "delete": "Удалить",
+      "deleteConfirm": "Удалить это аудио и его транскрипт?",
+      "readyToast": "{{name}} — транскрипт готов",
+      "failedToast": "{{name}} — ошибка распознавания",
+      "status": {
+        "queued": "В очереди",
+        "uploading": "Загрузка",
+        "processing": "Распознаётся",
+        "completed": "Готово",
+        "failed": "Ошибка"
+      },
+      "errors": {
+        "generic": "Что-то пошло не так. Попробуйте ещё раз.",
+        "unsupported": "Неподдерживаемый тип файла",
+        "someSkipped": "Часть файлов пропущена (неподдерживаемый тип)",
+        "tooMany": "Не больше 10 файлов за раз",
+        "too_many_files": "Не больше 10 файлов за раз",
+        "unsupported_files": "Неподдерживаемый тип файла",
+        "no_files": "Файлы не выбраны",
+        "source_missing": "Исходный файл не найден на диске",
+        "interrupted": "Загрузка прервана",
+        "transcription_failed": "Ошибка распознавания",
+        "consultation_deleted": "Удалено на сервере",
+        "deleteFailed": "Не удалось удалить. Попробуйте ещё раз.",
+        "audioUnavailable": "Аудио пока недоступно"
+      }
+    },
     "debug": {
       "title": "Отлаживать",
       "logs": {
@@ -600,7 +657,7 @@
         },
         "auth": {
           "title": "Authentication",
-          "description": "Sign in to the configured Curano LiveSTT server. Access tokens are kept in memory only.",
+          "description": "Sign in to the configured Curano LiveSTT server. Session tokens are saved so you stay signed in after restart.",
           "authenticated": "Authenticated",
           "unauthenticated": "Not authenticated",
           "updating": "Working..."
@@ -624,6 +681,10 @@
           "description": "Optional numeric consultation ID to attach to LiveSTT sessions.",
           "placeholder": "Optional",
           "error": "Consultation ID must be a positive integer or empty."
+        },
+        "dictation": {
+          "title": "Автоматическая пунктуация",
+          "description": "LiveSTT будет добавлять пунктуацию и форматирование диктовки. Отключите, если нужен менее отформатированный текст."
         },
         "text": {
           "title": "Prompt",
@@ -725,7 +786,10 @@
     "modelLoadFailed": "Не удалось загрузить модель: {{model}}",
     "modelLoadFailedUnknown": "неизвестная модель",
     "pasteFailedTitle": "Не удалось вставить текст",
-    "pasteFailed": "Не удалось вставить текст в активное приложение."
+    "pasteFailed": "Не удалось вставить текст в активное приложение.",
+    "emptyRecordingTitle": "Ничего не распознано",
+    "emptyRecordingSilent": "Микрофон не дал звука. Проверьте устройство и уровень или запустите тест микрофона в настройках SpeechMike.",
+    "emptyRecordingUnrecognized": "Звук записан, но речь не распознана. Говорите громче или ближе к микрофону."
   },
   "appLanguage": {
     "title": "Язык приложения",

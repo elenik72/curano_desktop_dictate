@@ -2,6 +2,7 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import {
   Cog,
+  FileAudio,
   FlaskConical,
   History,
   Info,
@@ -14,6 +15,7 @@ import {
   GeneralSettings,
   AdvancedSettings,
   HistorySettings,
+  TranscriptsSettings,
   DebugSettings,
   AboutSettings,
   PostProcessingSettings,
@@ -60,6 +62,12 @@ export const SECTIONS_CONFIG = {
     labelKey: "sidebar.history",
     icon: History,
     component: HistorySettings,
+    enabled: () => true,
+  },
+  transcripts: {
+    labelKey: "sidebar.transcripts",
+    icon: FileAudio,
+    component: TranscriptsSettings,
     enabled: () => true,
   },
   postprocessing: {

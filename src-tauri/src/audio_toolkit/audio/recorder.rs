@@ -38,6 +38,7 @@ enum Cmd {
 enum AudioChunk {
     Samples(Vec<f32>),
     EndOfStream,
+    StreamError(String),
 }
 
 pub struct AudioRecorder {
@@ -83,6 +84,8 @@ impl AudioRecorder {
     }
 
     pub fn open(&mut self, device: Option<Device>) -> Result<(), Box<dyn std::error::Error>> {
+        self.cleanup_finished_worker();
+
         if self.worker_handle.is_some() {
             return Ok(()); // already open
         }
@@ -225,31 +228,53 @@ impl AudioRecorder {
     }
 
     pub fn start(&self, preroll_samples: usize) -> Result<(), Box<dyn std::error::Error>> {
-        if let Some(tx) = &self.cmd_tx {
-            tx.send(Cmd::Start { preroll_samples })?;
+        if self
+            .worker_handle
+            .as_ref()
+            .map_or(true, |h| h.is_finished())
+        {
+            return Err(Box::new(Error::new(
+                std::io::ErrorKind::BrokenPipe,
+                "Recorder worker is not running",
+            )));
         }
+        let Some(tx) = &self.cmd_tx else {
+            return Err(Box::new(Error::new(
+                std::io::ErrorKind::NotConnected,
+                "Recorder command channel is not available",
+            )));
+        };
+        tx.send(Cmd::Start { preroll_samples })?;
         Ok(())
     }
 
     pub fn stop(&self) -> Result<Vec<f32>, Box<dyn std::error::Error>> {
         let (resp_tx, resp_rx) = mpsc::channel();
-        if let Some(tx) = &self.cmd_tx {
-            tx.send(Cmd::Stop {
-                reply_tx: resp_tx,
-                flush_remainder: true,
-            })?;
-        }
+        let Some(tx) = &self.cmd_tx else {
+            return Err(Box::new(Error::new(
+                std::io::ErrorKind::NotConnected,
+                "Recorder command channel is not available",
+            )));
+        };
+        tx.send(Cmd::Stop {
+            reply_tx: resp_tx,
+            flush_remainder: true,
+        })?;
         Ok(resp_rx.recv()?) // wait for the samples
     }
 
     pub fn cancel(&self) -> Result<Vec<f32>, Box<dyn std::error::Error>> {
         let (resp_tx, resp_rx) = mpsc::channel();
-        if let Some(tx) = &self.cmd_tx {
-            tx.send(Cmd::Stop {
-                reply_tx: resp_tx,
-                flush_remainder: false,
-            })?;
-        }
+        let Some(tx) = &self.cmd_tx else {
+            return Err(Box::new(Error::new(
+                std::io::ErrorKind::NotConnected,
+                "Recorder command channel is not available",
+            )));
+        };
+        tx.send(Cmd::Stop {
+            reply_tx: resp_tx,
+            flush_remainder: false,
+        })?;
         Ok(resp_rx.recv()?)
     }
 
@@ -262,6 +287,29 @@ impl AudioRecorder {
         }
         self.device = None;
         Ok(())
+    }
+
+    pub fn is_worker_running(&mut self) -> bool {
+        self.cleanup_finished_worker();
+        self.worker_handle.is_some()
+    }
+
+    fn cleanup_finished_worker(&mut self) {
+        let worker_finished = self
+            .worker_handle
+            .as_ref()
+            .map(|handle| handle.is_finished())
+            .unwrap_or(false);
+
+        if !worker_finished {
+            return;
+        }
+
+        self.cmd_tx = None;
+        if let Some(handle) = self.worker_handle.take() {
+            let _ = handle.join();
+        }
+        self.device = None;
     }
 
     fn build_stream<T>(
@@ -277,6 +325,7 @@ impl AudioRecorder {
     {
         let mut output_buffer = Vec::new();
         let mut eos_sent = false;
+        let error_tx = sample_tx.clone();
 
         let stream_cb = move |data: &[T], _: &cpal::InputCallbackInfo| {
             if stop_flag.load(Ordering::Relaxed) {
@@ -317,7 +366,11 @@ impl AudioRecorder {
         device.build_input_stream(
             &config.clone().into(),
             stream_cb,
-            |err| log::error!("Stream error: {}", err),
+            move |err| {
+                let message = err.to_string();
+                log::error!("Stream error: {}", message);
+                let _ = error_tx.send(AudioChunk::StreamError(message));
+            },
             None,
         )
     }
@@ -331,6 +384,8 @@ impl AudioRecorder {
         // codecs, certain ALSA drivers, etc.).
         let default_config = device.default_input_config()?;
         let target_rate = default_config.sample_rate();
+        let device_name = device.name().unwrap_or_default();
+        let is_speechmike = is_speechmike_audio_device(&device_name);
 
         // Try to find the best sample format at the device's default rate
         let supported_configs = match device.supported_input_configs() {
@@ -343,21 +398,25 @@ impl AudioRecorder {
         let mut best_config: Option<cpal::SupportedStreamConfigRange> = None;
 
         for config_range in supported_configs {
+            if is_speechmike {
+                log::info!(
+                    "SpeechMike input config candidate: channels={} min_rate={} max_rate={} format={:?}",
+                    config_range.channels(),
+                    config_range.min_sample_rate().0,
+                    config_range.max_sample_rate().0,
+                    config_range.sample_format()
+                );
+            }
+
             if config_range.min_sample_rate() <= target_rate
                 && config_range.max_sample_rate() >= target_rate
             {
                 match best_config {
                     None => best_config = Some(config_range),
                     Some(ref current) => {
-                        // Prioritize F32 > I16 > I32 > others
-                        let score = |fmt: cpal::SampleFormat| match fmt {
-                            cpal::SampleFormat::F32 => 4,
-                            cpal::SampleFormat::I16 => 3,
-                            cpal::SampleFormat::I32 => 2,
-                            _ => 1,
-                        };
-
-                        if score(config_range.sample_format()) > score(current.sample_format()) {
+                        if sample_format_score(config_range.sample_format(), is_speechmike)
+                            > sample_format_score(current.sample_format(), is_speechmike)
+                        {
                             best_config = Some(config_range);
                         }
                     }
@@ -375,6 +434,26 @@ impl AudioRecorder {
             target_rate
         );
         Ok(default_config)
+    }
+}
+
+fn is_speechmike_audio_device(device_name: &str) -> bool {
+    let normalized = device_name.to_lowercase();
+    normalized.contains("speechmike")
+        || normalized.contains("speech mike")
+        || normalized.contains("speechone")
+        || normalized.contains("philips")
+}
+
+fn sample_format_score(fmt: cpal::SampleFormat, prefer_usb_native_integer: bool) -> u8 {
+    match (prefer_usb_native_integer, fmt) {
+        (true, cpal::SampleFormat::I16) => 5,
+        (true, cpal::SampleFormat::U16) => 4,
+        (true, cpal::SampleFormat::F32) => 3,
+        (_, cpal::SampleFormat::F32) => 4,
+        (_, cpal::SampleFormat::I16) => 3,
+        (_, cpal::SampleFormat::I32) => 2,
+        _ => 1,
     }
 }
 
@@ -595,6 +674,10 @@ fn run_consumer(
         let raw = match chunk {
             AudioChunk::Samples(s) => s,
             AudioChunk::EndOfStream => continue,
+            AudioChunk::StreamError(message) => {
+                log::warn!("Stopping audio worker after stream error: {message}");
+                break;
+            }
         };
 
         // ---------- spectrum processing ---------------------------------- //
@@ -685,6 +768,10 @@ fn run_consumer(
                                 });
                             }
                             Ok(AudioChunk::EndOfStream) => break,
+                            Ok(AudioChunk::StreamError(message)) => {
+                                log::warn!("Stopping audio drain after stream error: {message}");
+                                break;
+                            }
                             Err(_) => {
                                 log::warn!("Timed out waiting for EndOfStream from audio callback");
                                 break;

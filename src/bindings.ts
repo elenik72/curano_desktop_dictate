@@ -109,6 +109,14 @@ async changeLivesttConsultationIdSetting(consultationId: string | null) : Promis
     else return { status: "error", error: e  as any };
 }
 },
+async changeLivesttDictationEnabledSetting(enabled: boolean) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("change_livestt_dictation_enabled_setting", { enabled }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async changeLivesttFinalizeTimeoutMsSetting(timeoutMs: number) : Promise<Result<null, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("change_livestt_finalize_timeout_ms_setting", { timeoutMs }) };
@@ -825,8 +833,56 @@ async getClamshellMicrophone() : Promise<Result<string, string>> {
 async isRecording() : Promise<boolean> {
     return await TAURI_INVOKE("is_recording");
 },
+/**
+ * Open the microphone stream so `mic-level` events flow for the mic-test UI.
+ * No-op when the stream is already open (always-on mode or active recording).
+ */
+async startMicTest() : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("start_mic_test") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Stop the mic-test stream. Only closes the microphone when it is safe to do
+ * so (on-demand mode, no recording in progress).
+ */
+async stopMicTest() : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("stop_mic_test") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Full audio-stack restart: fresh recorder + stream. UI recovery button for
+ * OS-level audio-session corruption that survives plain stream reopens.
+ */
+async restartAudioStack() : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("restart_audio_stack") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async getSpeechmikeStatus() : Promise<SpeechMikeStatus> {
     return await TAURI_INVOKE("get_speechmike_status");
+},
+/**
+ * Processes with an active audio-capture session (Windows). Empty elsewhere.
+ * Lets the UI warn that another app is also using the microphone.
+ */
+async getMicrophoneUsers() : Promise<Result<string[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_microphone_users") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 },
 async setSpeechmikeAutoSelect(enabled: boolean) : Promise<Result<null, string>> {
     try {
@@ -919,6 +975,41 @@ async updateRecordingRetentionPeriod(period: string) : Promise<Result<null, stri
     else return { status: "error", error: e  as any };
 }
 },
+async uploadsList() : Promise<UploadEntry[]> {
+    return await TAURI_INVOKE("uploads_list");
+},
+async uploadsAddFiles(paths: string[]) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("uploads_add_files", { paths }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async uploadsCancel(id: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("uploads_cancel", { id }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async uploadsRetry(id: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("uploads_retry", { id }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async uploadsDelete(id: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("uploads_delete", { id }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 /**
  * Checks if the Mac is a laptop by detecting battery presence
  * 
@@ -939,9 +1030,13 @@ async isLaptop() : Promise<Result<boolean, string>> {
 
 
 export const events = __makeEvents__<{
-historyUpdatePayload: HistoryUpdatePayload
+historyUpdatePayload: HistoryUpdatePayload,
+uploadProgressPayload: UploadProgressPayload,
+uploadsChangedPayload: UploadsChangedPayload
 }>({
-historyUpdatePayload: "history-update-payload"
+historyUpdatePayload: "history-update-payload",
+uploadProgressPayload: "upload-progress-payload",
+uploadsChangedPayload: "uploads-changed-payload"
 })
 
 /** user-defined constants **/
@@ -950,7 +1045,7 @@ historyUpdatePayload: "history-update-payload"
 
 /** user-defined types **/
 
-export type AppSettings = { bindings: Partial<{ [key in string]: ShortcutBinding }>; push_to_talk: boolean; audio_feedback: boolean; audio_feedback_volume?: number; sound_theme?: SoundTheme; start_hidden?: boolean; autostart_enabled?: boolean; update_checks_enabled?: boolean; selected_model?: string; always_on_microphone?: boolean; selected_microphone?: string | null; clamshell_microphone?: string | null; selected_output_device?: string | null; translate_to_english?: boolean; selected_language?: string; overlay_position?: OverlayPosition; debug_mode?: boolean; log_level?: LogLevel; custom_words?: string[]; model_unload_timeout?: ModelUnloadTimeout; word_correction_threshold?: number; history_limit?: number; recording_retention_period?: RecordingRetentionPeriod; paste_method?: PasteMethod; clipboard_handling?: ClipboardHandling; auto_submit?: boolean; auto_submit_key?: AutoSubmitKey; post_process_enabled?: boolean; post_process_provider_id?: string; post_process_providers?: PostProcessProvider[]; post_process_api_keys?: SecretMap; post_process_models?: Partial<{ [key in string]: string }>; post_process_prompts?: LLMPrompt[]; post_process_selected_prompt_id?: string | null; mute_while_recording?: boolean; append_trailing_space?: boolean; app_language?: string; experimental_enabled?: boolean; lazy_stream_close?: boolean; keyboard_implementation?: KeyboardImplementation; show_tray_icon?: boolean; paste_delay_ms?: number; typing_tool?: TypingTool; external_script_path: string | null; custom_filler_words?: string[] | null; whisper_accelerator?: WhisperAcceleratorSetting; ort_accelerator?: OrtAcceleratorSetting; whisper_gpu_device?: number; extra_recording_buffer_ms?: number; transcription_backend?: TranscriptionBackend; livestt_server_url?: string; livestt_audio_format?: LiveSttAudioFormat; livestt_consultation_id?: string | null; livestt_finalize_timeout_ms?: number; livestt_preroll_ms?: number; livestt_text?: string | null; livestt_terms?: string[]; livestt_general?: LiveSttGeneralEntry[]; speechmike_auto_select?: boolean; speechmike_button_mapping_enabled?: boolean; speechmike_last_seen_name?: string | null; selected_microphone_user_overridden?: boolean; livesttt_raw_hid_debug?: boolean }
+export type AppSettings = { bindings: Partial<{ [key in string]: ShortcutBinding }>; push_to_talk: boolean; audio_feedback: boolean; audio_feedback_volume?: number; sound_theme?: SoundTheme; start_hidden?: boolean; autostart_enabled?: boolean; update_checks_enabled?: boolean; selected_model?: string; always_on_microphone?: boolean; selected_microphone?: string | null; clamshell_microphone?: string | null; selected_output_device?: string | null; translate_to_english?: boolean; selected_language?: string; overlay_position?: OverlayPosition; debug_mode?: boolean; log_level?: LogLevel; custom_words?: string[]; model_unload_timeout?: ModelUnloadTimeout; word_correction_threshold?: number; history_limit?: number; recording_retention_period?: RecordingRetentionPeriod; paste_method?: PasteMethod; clipboard_handling?: ClipboardHandling; auto_submit?: boolean; auto_submit_key?: AutoSubmitKey; post_process_enabled?: boolean; post_process_provider_id?: string; post_process_providers?: PostProcessProvider[]; post_process_api_keys?: SecretMap; post_process_models?: Partial<{ [key in string]: string }>; post_process_prompts?: LLMPrompt[]; post_process_selected_prompt_id?: string | null; mute_while_recording?: boolean; append_trailing_space?: boolean; app_language?: string; experimental_enabled?: boolean; lazy_stream_close?: boolean; keyboard_implementation?: KeyboardImplementation; show_tray_icon?: boolean; paste_delay_ms?: number; typing_tool?: TypingTool; external_script_path: string | null; custom_filler_words?: string[] | null; whisper_accelerator?: WhisperAcceleratorSetting; ort_accelerator?: OrtAcceleratorSetting; whisper_gpu_device?: number; extra_recording_buffer_ms?: number; transcription_backend?: TranscriptionBackend; livestt_server_url?: string; livestt_audio_format?: LiveSttAudioFormat; livestt_consultation_id?: string | null; livestt_dictation_enabled?: boolean; livestt_finalize_timeout_ms?: number; livestt_preroll_ms?: number; livestt_text?: string | null; livestt_terms?: string[]; livestt_general?: LiveSttGeneralEntry[]; speechmike_auto_select?: boolean; speechmike_button_mapping_enabled?: boolean; speechmike_last_seen_name?: string | null; selected_microphone_user_overridden?: boolean; livesttt_raw_hid_debug?: boolean }
 export type AudioDevice = { index: string; name: string; is_default: boolean }
 export type AutoSubmitKey = "enter" | "ctrl_enter" | "cmd_enter"
 export type AvailableAccelerators = { whisper: string[]; ort: string[]; gpu_devices: GpuDeviceOption[] }
@@ -973,7 +1068,7 @@ reset_bindings: string[] }
 export type KeyboardImplementation = "tauri" | "handy_keys"
 export type LLMPrompt = { id: string; name: string; prompt: string }
 export type LiveSttAudioFormat = "pcm"
-export type LiveSttAuthStatus = { is_authenticated: boolean }
+export type LiveSttAuthStatus = { is_authenticated: boolean; username: string | null; password: string | null }
 export type LiveSttGeneralEntry = { key: string; value: string }
 export type LogEntry = { ts_ms: number; level: string; target: string; message: string; source: string }
 export type LogLevel = "trace" | "debug" | "info" | "warn" | "error"
@@ -997,6 +1092,32 @@ export type SoundTheme = "marimba" | "pop" | "custom"
 export type SpeechMikeStatus = { supported_platform: boolean; connected: boolean; blocked_by_other_app: boolean; device_name: string | null; vendor_id: number | null; product_id: number | null; serial_number: string | null; audio_device_name: string | null; buttons_enabled: boolean; auto_select_enabled: boolean; last_error: string | null; detected_blocking_processes: string[] }
 export type TranscriptionBackend = "local" | "live_stt"
 export type TypingTool = "auto" | "wtype" | "kwtype" | "dotool" | "ydotool" | "xdotool"
+/**
+ * One audio file uploaded for server-side transcription.
+ * 
+ * Each entry owns a dedicated consultation on the Curano backend — the
+ * consultation is an invisible container required by the API, never shown
+ * to the user.
+ */
+export type UploadEntry = { id: string; file_name: string; 
+/**
+ * Original local path; kept for retry. May point to a moved/deleted file.
+ */
+source_path: string | null; size_bytes: number; consultation_id: number | null; audio_id: number | null; created_at_ms: number; status: UploadStatus; 
+/**
+ * Upload progress 0-100, only meaningful while `Uploading`.
+ */
+progress: number; transcript: string | null; error: string | null }
+export type UploadProgressPayload = { id: string; progress: number }
+/**
+ * Lifecycle of a single uploaded audio file.
+ * 
+ * `Queued`/`Uploading` are local stages; `Processing` means the file is on
+ * the server and transcription is running there; `Completed`/`Failed` are
+ * terminal.
+ */
+export type UploadStatus = "queued" | "uploading" | "processing" | "completed" | "failed"
+export type UploadsChangedPayload = { entries: UploadEntry[] }
 export type WhisperAcceleratorSetting = "auto" | "cpu" | "gpu"
 export type WindowsMicrophonePermissionStatus = { supported: boolean; overall_access: PermissionAccess; device_access: PermissionAccess; app_access: PermissionAccess; desktop_app_access: PermissionAccess }
 

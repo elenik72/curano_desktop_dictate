@@ -5,8 +5,28 @@ use tauri::{AppHandle, State};
 
 #[tauri::command]
 #[specta::specta]
-pub fn get_speechmike_status(state: State<'_, Arc<SpeechMikeManager>>) -> SpeechMikeStatus {
-    state.get_status()
+pub fn get_speechmike_status(
+    app: AppHandle,
+    state: State<'_, Arc<SpeechMikeManager>>,
+) -> SpeechMikeStatus {
+    let mut status = state.get_status();
+    if status.supported_platform {
+        status.auto_select_enabled = get_settings(&app).speechmike_auto_select;
+    }
+    status
+}
+
+/// Processes with an active audio-capture session (Windows). Empty elsewhere.
+/// Lets the UI warn that another app is also using the microphone.
+#[tauri::command]
+#[specta::specta]
+pub async fn get_microphone_users() -> Result<Vec<String>, String> {
+    // COM enumeration + tasklist can take a moment; keep it off the main thread.
+    tauri::async_runtime::spawn_blocking(
+        crate::devices::audio_sessions::list_capture_session_processes,
+    )
+    .await
+    .map_err(|e| format!("microphone user scan failed: {e}"))
 }
 
 #[tauri::command]

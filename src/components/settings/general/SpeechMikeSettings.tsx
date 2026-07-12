@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
@@ -28,6 +28,19 @@ function toHex(n: number | null, digits: number): string {
 export const SpeechMikeSettings: React.FC = () => {
   const { t } = useTranslation();
   const [status, setStatus] = useState<SpeechMikeStatus | null>(null);
+  const [isMicTesting, setIsMicTesting] = useState(false);
+  const [micLevel, setMicLevel] = useState(0);
+  const smoothedLevelRef = useRef(0);
+  const [micUsers, setMicUsers] = useState<string[]>([]);
+
+  const refreshMicUsers = useCallback(async () => {
+    try {
+      const users = await invoke<string[]>("get_microphone_users");
+      setMicUsers(users);
+    } catch (e) {
+      console.error("get_microphone_users failed:", e);
+    }
+  }, []);
 
   const fetchStatus = useCallback(async () => {
     try {
@@ -56,8 +69,71 @@ export const SpeechMikeSettings: React.FC = () => {
     };
   }, [fetchStatus]);
 
+  useEffect(() => {
+    if (!isMicTesting) return;
+
+    let active = true;
+    const unlisten = listen<number[]>("mic-level", (event) => {
+      if (!active) return;
+      const peak = Math.max(0, ...event.payload);
+      // Fast attack, slow decay — keeps the bar readable for speech.
+      const prev = smoothedLevelRef.current;
+      const next = peak > prev ? peak : prev * 0.8 + peak * 0.2;
+      smoothedLevelRef.current = next;
+      setMicLevel(next);
+    });
+
+    return () => {
+      active = false;
+      unlisten.then((fn) => fn());
+      smoothedLevelRef.current = 0;
+      setMicLevel(0);
+      invoke("stop_mic_test").catch((e) =>
+        console.error("stop_mic_test failed:", e),
+      );
+    };
+  }, [isMicTesting]);
+
+  // Stop the test when the device disconnects.
+  const connected = status?.connected ?? false;
+  useEffect(() => {
+    if (!connected) setIsMicTesting(false);
+  }, [connected]);
+
+  // Refresh the "other apps using the microphone" list on connect and
+  // periodically while the section is visible (session enumeration is cheap).
+  useEffect(() => {
+    void refreshMicUsers();
+    const interval = setInterval(() => {
+      void refreshMicUsers();
+    }, 15000);
+    return () => clearInterval(interval);
+  }, [connected, refreshMicUsers]);
+
   if (!status) return null;
   if (!status.supported_platform) return null;
+
+  const handleMicTestToggle = async () => {
+    if (isMicTesting) {
+      setIsMicTesting(false);
+      return;
+    }
+    try {
+      await invoke("start_mic_test");
+      setIsMicTesting(true);
+    } catch (e) {
+      console.error("start_mic_test failed:", e);
+    }
+  };
+
+  const handleAudioRestart = async () => {
+    setIsMicTesting(false);
+    try {
+      await invoke("restart_audio_stack");
+    } catch (e) {
+      console.error("restart_audio_stack failed:", e);
+    }
+  };
 
   const handleAutoSelectToggle = async () => {
     const newValue = !status.auto_select_enabled;
@@ -107,6 +183,19 @@ export const SpeechMikeSettings: React.FC = () => {
             : t("settings.general.speechmike.disconnected")}
         </span>
       </SettingContainer>
+
+      {micUsers.length > 0 && (
+        <div className="px-4 py-3 bg-amber-50 border-t border-amber-200">
+          <p className="text-sm font-medium text-amber-800">
+            {t("settings.general.speechmike.micUsersTitle")}
+          </p>
+          <p className="text-xs text-amber-700 mt-1">
+            {t("settings.general.speechmike.micUsers", {
+              processes: micUsers.join(", "),
+            })}
+          </p>
+        </div>
+      )}
 
       {status.blocked_by_other_app && (
         <div className="px-4 py-3 bg-amber-50 border-t border-amber-200">
@@ -173,6 +262,70 @@ export const SpeechMikeSettings: React.FC = () => {
           />
         </button>
       </SettingContainer>
+
+      {status.connected && (
+        <SettingContainer
+          title={t("settings.general.speechmike.micTest.title")}
+          description={t("settings.general.speechmike.micTest.description")}
+          descriptionMode="tooltip"
+          grouped
+        >
+          <div className="flex items-center gap-3">
+            <div
+              className="flex h-3 w-40 items-end gap-px"
+              role="meter"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.round(Math.min(1, micLevel) * 100)}
+              aria-label={t("settings.general.speechmike.micTest.title")}
+            >
+              {Array.from({ length: 20 }, (_, i) => {
+                const threshold = (i + 1) / 20;
+                const lit = isMicTesting && Math.min(1, micLevel) >= threshold;
+                const color =
+                  threshold > 0.85
+                    ? "bg-red-500"
+                    : threshold > 0.6
+                      ? "bg-yellow-500"
+                      : "bg-green-500";
+                return (
+                  <span
+                    key={i}
+                    className={`h-full flex-1 rounded-[1px] ${
+                      lit ? color : "bg-slate-200"
+                    }`}
+                  />
+                );
+              })}
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                void handleMicTestToggle();
+              }}
+              className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+                isMicTesting
+                  ? "bg-blue-600 text-white hover:bg-blue-700"
+                  : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+              }`}
+            >
+              {isMicTesting
+                ? t("settings.general.speechmike.micTest.stop")
+                : t("settings.general.speechmike.micTest.start")}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                void handleAudioRestart();
+              }}
+              title={t("settings.general.speechmike.audioRestart.description")}
+              className="rounded px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
+            >
+              {t("settings.general.speechmike.audioRestart.button")}
+            </button>
+          </div>
+        </SettingContainer>
+      )}
 
       {status.connected && (
         <div className="px-4 py-3 border-t border-slate-100">

@@ -8,6 +8,7 @@ import { Input } from "../../ui/Input";
 import { SettingContainer } from "../../ui/SettingContainer";
 import { TagInput, type TagInputAddRejection } from "../../ui/TagInput";
 import { Textarea } from "../../ui/Textarea";
+import { ToggleSwitch } from "../../ui/ToggleSwitch";
 import {
   MAX_FINALIZE_TIMEOUT_MS,
   MAX_LIVESTT_GENERAL_ENTRIES,
@@ -26,6 +27,7 @@ import {
 
 interface LiveSttAdvancedSettingsProps {
   consultationId: string;
+  dictationEnabled: boolean;
   finalizeTimeoutMs: number;
   text: string;
   terms: string[];
@@ -75,7 +77,14 @@ const entriesEqual = (
 
 export const LiveSttAdvancedSettings: React.FC<
   LiveSttAdvancedSettingsProps
-> = ({ consultationId, finalizeTimeoutMs, text, terms, general }) => {
+> = ({
+  consultationId,
+  dictationEnabled,
+  finalizeTimeoutMs,
+  text,
+  terms,
+  general,
+}) => {
   const { t } = useTranslation();
   const { isUpdating, updateSetting, refreshSettings } = useSettings();
   const [termsError, setTermsError] = useState<string | null>(null);
@@ -301,6 +310,19 @@ export const LiveSttAdvancedSettings: React.FC<
 
   return (
     <>
+      <ToggleSwitch
+        checked={dictationEnabled}
+        onChange={(enabled) =>
+          updateSetting("livestt_dictation_enabled", enabled)
+        }
+        isUpdating={isUpdating("livestt_dictation_enabled")}
+        label={t("settings.transcriptionBackend.livestt.dictation.title")}
+        description={t(
+          "settings.transcriptionBackend.livestt.dictation.description",
+        )}
+        grouped
+      />
+
       <SettingContainer
         title={t("settings.transcriptionBackend.livestt.text.title")}
         description={t(

@@ -16,6 +16,7 @@ export const LiveSttSettingsSection: React.FC = () => {
   const { getSetting, isUpdating, refreshSettings } = useSettings();
   const serverUrl = getSetting("livestt_server_url") ?? "";
   const consultationId = getSetting("livestt_consultation_id") ?? "";
+  const dictationEnabled = getSetting("livestt_dictation_enabled") ?? true;
   const finalizeTimeoutMs = getSetting("livestt_finalize_timeout_ms") ?? 15000;
   const text = getSetting("livestt_text") ?? "";
   const terms = getSetting("livestt_terms") ?? [];
@@ -87,6 +88,7 @@ export const LiveSttSettingsSection: React.FC = () => {
       />
       <LiveSttAdvancedSettings
         consultationId={consultationId}
+        dictationEnabled={dictationEnabled}
         finalizeTimeoutMs={finalizeTimeoutMs}
         text={text}
         terms={terms}

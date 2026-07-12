@@ -163,6 +163,8 @@ const settingUpdaters: {
     commands.changeLivesttServerUrlSetting(value as string),
   livestt_consultation_id: (value) =>
     commands.changeLivesttConsultationIdSetting(value as string | null),
+  livestt_dictation_enabled: (value) =>
+    commands.changeLivesttDictationEnabledSetting(value as boolean),
   livestt_finalize_timeout_ms: (value) =>
     commands.changeLivesttFinalizeTimeoutMsSetting(value as number),
   livestt_text: (value) =>

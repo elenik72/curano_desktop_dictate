@@ -111,6 +111,30 @@ function App() {
   }, [t]);
 
   useEffect(() => {
+    // ~0.5s of 16 kHz audio: below this the microphone effectively
+    // delivered nothing and the problem is capture, not recognition.
+    const SILENT_SAMPLE_THRESHOLD = 8000;
+    const unlisten = listen<{ sample_count: number }>(
+      "transcription-empty",
+      (event) => {
+        if (event.payload.sample_count < SILENT_SAMPLE_THRESHOLD) {
+          toast.error(t("errors.emptyRecordingTitle"), {
+            description: t("errors.emptyRecordingSilent"),
+          });
+        } else {
+          toast.error(t("errors.emptyRecordingTitle"), {
+            description: t("errors.emptyRecordingUnrecognized"),
+          });
+        }
+      },
+    );
+
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, [t]);
+
+  useEffect(() => {
     const unlisten = listen<ModelStateEvent>("model-state-changed", (event) => {
       if (event.payload.event_type === "loading_failed") {
         toast.error(

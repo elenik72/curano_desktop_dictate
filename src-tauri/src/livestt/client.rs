@@ -21,6 +21,7 @@ pub struct LiveSttGeneralEntry {
 pub struct LiveSttConfig {
     pub server_url: String,
     pub access_token: String,
+    pub dictation_enabled: bool,
     pub consultation_id: Option<i64>,
     pub text: Option<String>,
     pub terms: Vec<String>,
@@ -267,7 +268,14 @@ pub fn build_websocket_url(config: &LiveSttConfig) -> Result<Url, String> {
         let mut pairs = url.query_pairs_mut();
         pairs.append_pair("token", &config.access_token);
         pairs.append_pair("audio_format", "pcm");
-        pairs.append_pair("dictation", "true");
+        pairs.append_pair(
+            "dictation",
+            if config.dictation_enabled {
+                "true"
+            } else {
+                "false"
+            },
+        );
 
         if let Some(consultation_id) = config.consultation_id {
             pairs.append_pair("consultation_id", &consultation_id.to_string());
@@ -587,6 +595,7 @@ mod tests {
         LiveSttConfig {
             server_url: "https://grandedoc-server-98243818959.europe-west6.run.app".to_string(),
             access_token: "token value".to_string(),
+            dictation_enabled: true,
             consultation_id: None,
             text: None,
             terms: Vec::new(),
@@ -614,6 +623,16 @@ mod tests {
         let url = build_websocket_url(&test_config()).unwrap();
 
         assert!(url.query().unwrap().contains("dictation=true"));
+    }
+
+    #[test]
+    fn livestt_url_builder_can_disable_dictation_flag() {
+        let mut config = test_config();
+        config.dictation_enabled = false;
+
+        let url = build_websocket_url(&config).unwrap();
+
+        assert!(url.query().unwrap().contains("dictation=false"));
     }
 
     #[test]

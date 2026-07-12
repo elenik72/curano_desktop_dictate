@@ -22,6 +22,7 @@ mod transcription_coordinator;
 mod transcription_finalizer;
 mod tray;
 mod tray_i18n;
+mod uploads;
 mod utils;
 
 pub use cli::CliArgs;
@@ -348,6 +349,7 @@ pub fn run(cli_args: CliArgs) {
             shortcut::change_transcription_backend_setting,
             shortcut::change_livestt_server_url_setting,
             shortcut::change_livestt_consultation_id_setting,
+            shortcut::change_livestt_dictation_enabled_setting,
             shortcut::change_livestt_finalize_timeout_ms_setting,
             shortcut::change_livestt_preroll_ms_setting,
             shortcut::change_livestt_text_setting,
@@ -439,7 +441,11 @@ pub fn run(cli_args: CliArgs) {
             commands::audio::set_clamshell_microphone,
             commands::audio::get_clamshell_microphone,
             commands::audio::is_recording,
+            commands::audio::start_mic_test,
+            commands::audio::stop_mic_test,
+            commands::audio::restart_audio_stack,
             commands::speechmike::get_speechmike_status,
+            commands::speechmike::get_microphone_users,
             commands::speechmike::set_speechmike_auto_select,
             commands::speechmike::set_speechmike_button_mapping_enabled,
             commands::transcription::set_model_unload_timeout,
@@ -452,9 +458,18 @@ pub fn run(cli_args: CliArgs) {
             commands::history::retry_history_entry_transcription,
             commands::history::update_history_limit,
             commands::history::update_recording_retention_period,
+            uploads::commands::uploads_list,
+            uploads::commands::uploads_add_files,
+            uploads::commands::uploads_cancel,
+            uploads::commands::uploads_retry,
+            uploads::commands::uploads_delete,
             helpers::clamshell::is_laptop,
         ])
-        .events(collect_events![managers::history::HistoryUpdatePayload,]);
+        .events(collect_events![
+            managers::history::HistoryUpdatePayload,
+            uploads::types::UploadsChangedPayload,
+            uploads::types::UploadProgressPayload,
+        ]);
 
     #[cfg(debug_assertions)] // <- Only export on non-release builds
     specta_builder
@@ -544,6 +559,28 @@ pub fn run(cli_args: CliArgs) {
         .setup(move |app| {
             specta_builder.mount_events(app);
 
+            app.manage(uploads::manager::UploadsManager::new(app.handle().clone()));
+
+            livestt::auth::restore_persisted_livestt_tokens(app.handle());
+
+            // Re-login with persisted credentials on startup so the LiveSTT
+            // session is always fresh. Restored tokens above remain the
+            // fallback if the network is unavailable or credentials changed.
+            {
+                let app_handle = app.handle().clone();
+                tauri::async_runtime::spawn(async move {
+                    match livestt::auth::relogin_with_persisted_credentials(&app_handle).await {
+                        Ok(()) => {
+                            log::info!("LiveSTT startup re-login succeeded");
+                            let _ = app_handle.emit("livestt://auth-changed", ());
+                        }
+                        Err(e) => {
+                            log::warn!("LiveSTT startup re-login skipped: {e}");
+                        }
+                    }
+                });
+            }
+
             // Wire the log ring to the app handle so it can emit events
             app.state::<Arc<log_sink::LogRing>>()
                 .set_app_handle(app.handle().clone());
@@ -553,7 +590,7 @@ pub fn run(cli_args: CliArgs) {
             let mut win_builder =
                 tauri::WebviewWindowBuilder::new(app, "main", tauri::WebviewUrl::App("/".into()))
                     .title("Curano AI Dictate")
-                    .inner_size(780.0, 570.0)
+                    .inner_size(900.0, 680.0)
                     .min_inner_size(680.0, 570.0)
                     .resizable(true)
                     .maximizable(false)
