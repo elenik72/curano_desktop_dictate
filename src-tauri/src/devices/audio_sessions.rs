@@ -101,17 +101,17 @@ unsafe fn collect_capture_session_pids() -> Vec<u32> {
 /// process-handle permissions; best effort.
 #[cfg(target_os = "windows")]
 fn tasklist_pid_names() -> std::collections::HashMap<u32, String> {
-    use std::process::Command;
-
-    let mut map = std::collections::HashMap::new();
-    let Ok(output) = Command::new("tasklist")
-        .args(["/FO", "CSV", "/NH"])
-        .output()
-    else {
-        return map;
+    let Ok(output) = crate::devices::windows_process::tasklist_csv_output() else {
+        return std::collections::HashMap::new();
     };
 
-    for line in String::from_utf8_lossy(&output.stdout).lines() {
+    parse_tasklist_pid_names(&String::from_utf8_lossy(&output.stdout))
+}
+
+#[cfg(any(target_os = "windows", test))]
+fn parse_tasklist_pid_names(stdout: &str) -> std::collections::HashMap<u32, String> {
+    let mut map = std::collections::HashMap::new();
+    for line in stdout.lines() {
         let mut fields = line.split('"').filter(|s| !s.is_empty() && *s != ",");
         let (Some(name), Some(pid_str)) = (fields.next(), fields.next()) else {
             continue;
@@ -126,4 +126,39 @@ fn tasklist_pid_names() -> std::collections::HashMap<u32, String> {
 #[cfg(not(target_os = "windows"))]
 pub fn list_capture_session_processes() -> Vec<String> {
     vec![]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_tasklist_pid_names;
+
+    #[test]
+    fn parses_process_names_and_pids_from_tasklist_csv() {
+        let stdout = concat!(
+            "\"SpeechControl.exe\",\"1234\",\"Console\",\"1\",\"10,000 K\"\r\n",
+            "\"Teams.exe\",\"9876\",\"Console\",\"1\",\"20,000 K\"\r\n",
+        );
+
+        let processes = parse_tasklist_pid_names(stdout);
+
+        assert_eq!(
+            processes.get(&1234).map(String::as_str),
+            Some("SpeechControl.exe")
+        );
+        assert_eq!(processes.get(&9876).map(String::as_str), Some("Teams.exe"));
+    }
+
+    #[test]
+    fn ignores_malformed_tasklist_rows() {
+        let stdout = concat!(
+            "not csv\r\n",
+            "\"MissingPid.exe\",\"not-a-pid\",\"Console\"\r\n",
+            "\"Valid.exe\",\"42\",\"Console\",\"1\",\"1,000 K\"\r\n",
+        );
+
+        let processes = parse_tasklist_pid_names(stdout);
+
+        assert_eq!(processes.len(), 1);
+        assert_eq!(processes.get(&42).map(String::as_str), Some("Valid.exe"));
+    }
 }
