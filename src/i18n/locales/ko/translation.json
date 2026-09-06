@@ -16,7 +16,8 @@
     "history": "히스토리",
     "debug": "디버그",
     "about": "정보",
-    "transcripts": "Transcripts"
+    "transcripts": "Transcripts",
+    "dictation": "음성 명령"
   },
   "onboarding": {
     "subtitle": "시작하려면 음성 인식 모델을 선택하세요",
@@ -684,7 +685,7 @@
     "transcripts": {
       "title": "Audio transcripts",
       "dropTitle": "Drag audio files here or click to choose",
-      "dropHint": "mp3, m4a, wav, ogg, flac and more · up to 10 files at once",
+      "dropHint": "mp3, m4a, wav, mp4 · 최대 10개 파일 · 각 200 MB까지",
       "dropOverlay": "Drop audio files to upload",
       "filePickerFilter": "Audio files",
       "empty": "No uploads yet. Drop audio files here to get transcripts.",
@@ -700,6 +701,7 @@
       "retry": "Retry",
       "delete": "Delete",
       "deleteConfirm": "Delete this audio and its transcript?",
+      "deleteLocalConfirm": "이 녹음을 목록에서 제거할까요? 전사본은 서버에 남습니다.",
       "readyToast": "{{name}} — transcript ready",
       "failedToast": "{{name}} — transcription failed",
       "status": {
@@ -722,7 +724,74 @@
         "transcription_failed": "Transcription failed",
         "consultation_deleted": "Deleted on the server",
         "deleteFailed": "Failed to delete. Try again.",
-        "audioUnavailable": "Audio is not available yet"
+        "audioUnavailable": "Audio is not available yet",
+        "file_too_large": "파일이 200 MB 제한을 초과합니다",
+        "job_deleted": "서버에서 삭제됨"
+      }
+    },
+    "dictation": {
+      "title": "음성 명령",
+      "addCommand": "명령 추가",
+      "authRequired": "명령을 관리하려면 일반 설정에서 전사 서버에 로그인하세요.",
+      "searchPlaceholder": "명령 및 문구 검색...",
+      "filters": {
+        "allSources": "모든 명령",
+        "allTypes": "모든 유형",
+        "allLanguages": "모든 언어"
+      },
+      "total": "합계: {{count}}",
+      "loading": "불러오는 중...",
+      "empty": "찾을 수 없음",
+      "loadMore": "더 보기",
+      "badge": {
+        "global": "기본",
+        "user": "내 것"
+      },
+      "phraseCount": "{{enabled}}/{{total}} 문구",
+      "disableCommand": "나에게만 비활성화",
+      "enableCommand": "활성화",
+      "delete": "명령 삭제",
+      "deleteCommandConfirm": "“{{name}}” 명령을 모든 문구와 함께 삭제할까요?",
+      "deleted": "명령이 삭제됨",
+      "edit": "편집",
+      "save": "저장",
+      "saving": "저장 중...",
+      "cancel": "취소",
+      "create": "만들기",
+      "created": "명령이 생성됨",
+      "createTitle": "새 명령",
+      "form": {
+        "name": "명령 이름",
+        "replacement": "대체 텍스트",
+        "phrases": "음성 문구(최소 1개)"
+      },
+      "phrasePlaceholder": "음성 문구, 예: “새 줄”",
+      "addPhrase": "추가",
+      "addPhraseRow": "문구 추가",
+      "disablePhrase": "문구를 나에게만 비활성화",
+      "enablePhrase": "문구 활성화",
+      "deletePhrase": "문구 삭제",
+      "opType": {
+        "insert_text": "텍스트 삽입",
+        "opening_mark": "여는 기호",
+        "closing_mark": "닫는 기호",
+        "sentence_terminator": "문장 끝",
+        "toggle_mark": "짝 기호",
+        "newline": "새 줄",
+        "paragraph": "새 단락"
+      },
+      "opTypeHint": {
+        "insert_text": "텍스트를 별도의 단어 또는 블록으로 삽입합니다.",
+        "opening_mark": "기호가 다음 단어에 붙습니다(예: 여는 괄호).",
+        "closing_mark": "기호가 이전 단어에 붙습니다(예: 쉼표나 닫는 괄호).",
+        "sentence_terminator": "문장을 끝내고 다음 단어는 대문자로 시작합니다.",
+        "toggle_mark": "짝을 이루는 기호를 번갈아 열고 닫습니다(예: 따옴표).",
+        "newline": "새 줄을 시작합니다. 대체 텍스트가 필요 없습니다.",
+        "paragraph": "새 단락을 시작합니다. 대체 텍스트가 필요 없습니다."
+      },
+      "errors": {
+        "duplicate": "이미 존재하는 문구입니다",
+        "generic": "문제가 발생했습니다. 다시 시도하세요."
       }
     }
   },

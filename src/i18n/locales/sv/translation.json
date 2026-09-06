@@ -16,7 +16,8 @@
     "history": "Historik",
     "debug": "Felsökning",
     "about": "Om",
-    "transcripts": "Transcripts"
+    "transcripts": "Transcripts",
+    "dictation": "Röstkommandon"
   },
   "onboarding": {
     "subtitle": "För att komma igång, välj en transkriptionsmodell",
@@ -684,7 +685,7 @@
     "transcripts": {
       "title": "Audio transcripts",
       "dropTitle": "Drag audio files here or click to choose",
-      "dropHint": "mp3, m4a, wav, ogg, flac and more · up to 10 files at once",
+      "dropHint": "mp3, m4a, wav, mp4 · upp till 10 filer · upp till 200 MB per fil",
       "dropOverlay": "Drop audio files to upload",
       "filePickerFilter": "Audio files",
       "empty": "No uploads yet. Drop audio files here to get transcripts.",
@@ -700,6 +701,7 @@
       "retry": "Retry",
       "delete": "Delete",
       "deleteConfirm": "Delete this audio and its transcript?",
+      "deleteLocalConfirm": "Ta bort inspelningen från listan? Transkriptet finns kvar på servern.",
       "readyToast": "{{name}} — transcript ready",
       "failedToast": "{{name}} — transcription failed",
       "status": {
@@ -722,7 +724,74 @@
         "transcription_failed": "Transcription failed",
         "consultation_deleted": "Deleted on the server",
         "deleteFailed": "Failed to delete. Try again.",
-        "audioUnavailable": "Audio is not available yet"
+        "audioUnavailable": "Audio is not available yet",
+        "file_too_large": "Filen överskrider gränsen på 200 MB",
+        "job_deleted": "Raderad på servern"
+      }
+    },
+    "dictation": {
+      "title": "Röstkommandon",
+      "addCommand": "Lägg till kommando",
+      "authRequired": "Logga in på transkriberingsservern i allmänna inställningar för att hantera kommandon.",
+      "searchPlaceholder": "Sök kommandon och fraser...",
+      "filters": {
+        "allSources": "Alla kommandon",
+        "allTypes": "Alla typer",
+        "allLanguages": "Alla språk"
+      },
+      "total": "Totalt: {{count}}",
+      "loading": "Läser in...",
+      "empty": "Inget hittades",
+      "loadMore": "Visa fler",
+      "badge": {
+        "global": "Standard",
+        "user": "Mina"
+      },
+      "phraseCount": "{{enabled}}/{{total}} fraser",
+      "disableCommand": "Inaktivera för mig",
+      "enableCommand": "Aktivera",
+      "delete": "Ta bort kommando",
+      "deleteCommandConfirm": "Ta bort kommandot ”{{name}}” med alla dess fraser?",
+      "deleted": "Kommandot borttaget",
+      "edit": "Redigera",
+      "save": "Spara",
+      "saving": "Sparar...",
+      "cancel": "Avbryt",
+      "create": "Skapa",
+      "created": "Kommandot skapat",
+      "createTitle": "Nytt kommando",
+      "form": {
+        "name": "Kommandonamn",
+        "replacement": "Ersättningstext",
+        "phrases": "Röstfraser (minst en)"
+      },
+      "phrasePlaceholder": "Röstfras, t.ex. ”ny rad”",
+      "addPhrase": "Lägg till",
+      "addPhraseRow": "Ytterligare fras",
+      "disablePhrase": "Inaktivera frasen för mig",
+      "enablePhrase": "Aktivera frasen",
+      "deletePhrase": "Ta bort frasen",
+      "opType": {
+        "insert_text": "Infoga text",
+        "opening_mark": "Öppnande tecken",
+        "closing_mark": "Avslutande tecken",
+        "sentence_terminator": "Meningsslut",
+        "toggle_mark": "Parat tecken",
+        "newline": "Ny rad",
+        "paragraph": "Nytt stycke"
+      },
+      "opTypeHint": {
+        "insert_text": "Infogar texten som ett separat ord eller block.",
+        "opening_mark": "Tecknet fästs vid nästa ord, t.ex. öppnande parentes.",
+        "closing_mark": "Tecknet fästs vid föregående ord, t.ex. komma eller avslutande parentes.",
+        "sentence_terminator": "Avslutar meningen; nästa ord börjar med stor bokstav.",
+        "toggle_mark": "Öppnar och stänger växelvis ett parat tecken, t.ex. citattecken.",
+        "newline": "Börjar en ny rad. Ingen ersättningstext behövs.",
+        "paragraph": "Börjar ett nytt stycke. Ingen ersättningstext behövs."
+      },
+      "errors": {
+        "duplicate": "Frasen finns redan",
+        "generic": "Något gick fel. Försök igen."
       }
     }
   },

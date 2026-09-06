@@ -16,20 +16,19 @@ pub enum UploadStatus {
     Failed,
 }
 
-/// One audio file uploaded for server-side transcription.
-///
-/// Each entry owns a dedicated consultation on the Curano backend — the
-/// consultation is an invisible container required by the API, never shown
-/// to the user.
+/// One audio file uploaded for server-side transcription via the standalone
+/// `/api/transcriptions` jobs API (no consultation or patient involved).
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub struct UploadEntry {
     pub id: String,
     pub file_name: String,
-    /// Original local path; kept for retry. May point to a moved/deleted file.
+    /// Original local path; kept for retry and playback. May point to a
+    /// moved/deleted file.
     pub source_path: Option<String>,
     pub size_bytes: u32,
-    pub consultation_id: Option<i64>,
-    pub audio_id: Option<i64>,
+    /// Server-side transcription job id, set once the upload finished.
+    #[serde(default)]
+    pub job_id: Option<i64>,
     pub created_at_ms: i64,
     pub status: UploadStatus,
     /// Upload progress 0-100, only meaningful while `Uploading`.

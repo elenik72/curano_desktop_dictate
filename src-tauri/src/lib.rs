@@ -7,6 +7,7 @@ pub mod cli;
 mod clipboard;
 mod commands;
 mod devices;
+mod dictation;
 mod helpers;
 mod input;
 mod livestt;
@@ -463,6 +464,15 @@ pub fn run(cli_args: CliArgs) {
             uploads::commands::uploads_cancel,
             uploads::commands::uploads_retry,
             uploads::commands::uploads_delete,
+            dictation::commands::dictation_list_commands,
+            dictation::commands::dictation_create_command,
+            dictation::commands::dictation_update_command,
+            dictation::commands::dictation_delete_command,
+            dictation::commands::dictation_add_phrase,
+            dictation::commands::dictation_update_phrase,
+            dictation::commands::dictation_delete_phrase,
+            dictation::commands::dictation_set_default_command_disabled,
+            dictation::commands::dictation_set_default_phrase_disabled,
             helpers::clamshell::is_laptop,
         ])
         .events(collect_events![

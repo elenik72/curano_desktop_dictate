@@ -28,24 +28,15 @@ import { commands, events, UploadEntry, UploadStatus } from "@/bindings";
 import { AudioPlayer } from "@/components/ui/AudioPlayer";
 import { useOsType } from "@/hooks/useOsType";
 
-const AUDIO_EXTENSIONS = [
-  "mp3",
-  "m4a",
-  "mp4",
-  "wav",
-  "ogg",
-  "oga",
-  "opus",
-  "flac",
-  "aac",
-  "webm",
-  "amr",
-  "wma",
-  "aif",
-  "aiff",
-];
+const AUDIO_EXTENSIONS = ["mp3", "m4a", "wav", "mp4"];
 
 const MAX_FILES_PER_DROP = 10;
+
+const Spinner: React.FC<{ size?: number }> = ({ size = 12 }) => (
+  <span className="inline-flex animate-spin" style={{ lineHeight: 0 }}>
+    <Loader2 size={size} />
+  </span>
+);
 
 const isSupportedAudioPath = (path: string) => {
   const ext = path.split(".").pop()?.toLowerCase() ?? "";
@@ -252,7 +243,7 @@ export const TranscriptsSettings: React.FC = () => {
   };
 
   const deleteUpload = async (entry: UploadEntry) => {
-    const confirmed = await ask(t("settings.transcripts.deleteConfirm"), {
+    const confirmed = await ask(t("settings.transcripts.deleteLocalConfirm"), {
       title: t("settings.transcripts.delete"),
       kind: "warning",
     });
@@ -303,10 +294,10 @@ export const TranscriptsSettings: React.FC = () => {
 
     return (
       <span
-        className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${styles[entry.status]}`}
+        className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs leading-none font-medium ${styles[entry.status]}`}
       >
         {(entry.status === "processing" || entry.status === "uploading") && (
-          <Loader2 size={12} className="animate-spin" />
+          <Spinner size={12} />
         )}
         {t(`settings.transcripts.status.${entry.status}`)}
       </span>
