@@ -1002,9 +1002,90 @@ async uploadsRetry(id: string) : Promise<Result<null, string>> {
     else return { status: "error", error: e  as any };
 }
 },
+/**
+ * Remove an entry from the local list; the server-side transcription job
+ * is not deleted (the jobs API has no delete endpoint).
+ */
 async uploadsDelete(id: string) : Promise<Result<null, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("uploads_delete", { id }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async dictationListCommands(query: DictationListQuery) : Promise<Result<DictationCommandList, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("dictation_list_commands", { query }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async dictationCreateCommand(payload: DictationCommandCreate) : Promise<Result<DictationCommand, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("dictation_create_command", { payload }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async dictationUpdateCommand(commandId: number, payload: DictationCommandUpdate) : Promise<Result<DictationCommand, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("dictation_update_command", { commandId, payload }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async dictationDeleteCommand(commandId: number) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("dictation_delete_command", { commandId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async dictationAddPhrase(commandId: number, payload: DictationPhraseInput) : Promise<Result<DictationPhrase, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("dictation_add_phrase", { commandId, payload }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async dictationUpdatePhrase(phraseId: number, payload: DictationPhraseUpdate) : Promise<Result<DictationPhrase, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("dictation_update_phrase", { phraseId, payload }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async dictationDeletePhrase(phraseId: number) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("dictation_delete_phrase", { phraseId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Disable (`disabled = true`) or re-enable a global default command for the
+ * current doctor. Personal commands are deleted instead — the server
+ * exposes no disable toggle for them (`capabilities.can_disable = false`).
+ */
+async dictationSetDefaultCommandDisabled(commandId: number, disabled: boolean) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("dictation_set_default_command_disabled", { commandId, disabled }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async dictationSetDefaultPhraseDisabled(phraseId: number, disabled: boolean) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("dictation_set_default_phrase_disabled", { phraseId, disabled }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -1052,6 +1133,33 @@ export type AvailableAccelerators = { whisper: string[]; ort: string[]; gpu_devi
 export type BindingResponse = { success: boolean; binding: ShortcutBinding | null; error: string | null }
 export type ClipboardHandling = "dont_modify" | "copy_to_clipboard"
 export type CustomSounds = { start: boolean; stop: boolean }
+/**
+ * What the current doctor may do with a command or phrase. Comes from the
+ * server; the UI must follow it instead of deriving rules locally.
+ */
+export type DictationCapabilities = { can_edit: boolean; can_delete: boolean; can_disable: boolean }
+export type DictationCommand = { id: number; name: string; operation_type: string; replacement_value: string | null; source: string; enabled: boolean; disabled_by_doctor: boolean; sort_order: number; phrase_count: number; enabled_phrase_count: number; capabilities: DictationCapabilities; phrases: DictationPhrase[] }
+export type DictationCommandCreate = { name: string; operation_type: string; replacement_value: string | null; phrases: DictationPhraseInput[] }
+export type DictationCommandList = { items: DictationCommand[]; total: number; next_cursor: string | null; facets: DictationFacets }
+/**
+ * PATCH payload for the doctor's own command; `None` fields are omitted.
+ */
+export type DictationCommandUpdate = { name: string | null; operation_type: string | null; 
+/**
+ * `Some(None)` is not representable here; the server treats an explicit
+ * null as "clear", which only makes sense for newline/paragraph — the
+ * command layer sends null automatically for those types.
+ */
+replacement_value: string | null }
+export type DictationFacets = { languages?: Partial<{ [key in string]: number }>; sources?: Partial<{ [key in string]: number }>; operation_types?: Partial<{ [key in string]: number }> }
+export type DictationListQuery = { search: string | null; language: string | null; source: string | null; enabled: boolean | null; operation_type: string | null; cursor: string | null; limit: number | null }
+export type DictationPhrase = { id: number; command_id: number; phrase: string; normalized_phrase: string | null; language: string | null; 
+/**
+ * `global` or `user`. A phrase may be personal even on a global command.
+ */
+source: string; enabled: boolean; disabled_by_doctor: boolean; capabilities: DictationCapabilities }
+export type DictationPhraseInput = { phrase: string; language: string | null }
+export type DictationPhraseUpdate = { phrase: string | null; language: string | null }
 export type EngineType = "Whisper" | "Parakeet" | "Moonshine" | "MoonshineStreaming" | "SenseVoice" | "GigaAM" | "Canary" | "Cohere"
 export type GpuDeviceOption = { id: number; name: string; total_vram_mb: number }
 export type HistoryEntry = { id: number; file_name: string; timestamp: number; saved: boolean; title: string; transcription_text: string; post_processed_text: string | null; post_process_prompt: string | null; post_process_requested: boolean; provider: HistoryProvider; livestt_session_id: number | null; livestt_consultation_id: number | null }
@@ -1093,17 +1201,19 @@ export type SpeechMikeStatus = { supported_platform: boolean; connected: boolean
 export type TranscriptionBackend = "local" | "live_stt"
 export type TypingTool = "auto" | "wtype" | "kwtype" | "dotool" | "ydotool" | "xdotool"
 /**
- * One audio file uploaded for server-side transcription.
- * 
- * Each entry owns a dedicated consultation on the Curano backend — the
- * consultation is an invisible container required by the API, never shown
- * to the user.
+ * One audio file uploaded for server-side transcription via the standalone
+ * `/api/transcriptions` jobs API (no consultation or patient involved).
  */
 export type UploadEntry = { id: string; file_name: string; 
 /**
- * Original local path; kept for retry. May point to a moved/deleted file.
+ * Original local path; kept for retry and playback. May point to a
+ * moved/deleted file.
  */
-source_path: string | null; size_bytes: number; consultation_id: number | null; audio_id: number | null; created_at_ms: number; status: UploadStatus; 
+source_path: string | null; size_bytes: number; 
+/**
+ * Server-side transcription job id, set once the upload finished.
+ */
+job_id?: number | null; created_at_ms: number; status: UploadStatus; 
 /**
  * Upload progress 0-100, only meaningful while `Uploading`.
  */

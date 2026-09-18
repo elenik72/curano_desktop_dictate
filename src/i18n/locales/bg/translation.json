@@ -16,7 +16,8 @@
     "history": "История",
     "debug": "Отстраняване",
     "about": "За приложението",
-    "transcripts": "Transcripts"
+    "transcripts": "Transcripts",
+    "dictation": "Гласови команди"
   },
   "onboarding": {
     "subtitle": "За да започнете, изберете модел за транскрипция",
@@ -684,7 +685,7 @@
     "transcripts": {
       "title": "Audio transcripts",
       "dropTitle": "Drag audio files here or click to choose",
-      "dropHint": "mp3, m4a, wav, ogg, flac and more · up to 10 files at once",
+      "dropHint": "mp3, m4a, wav, mp4 · до 10 файла · до 200 МБ всеки",
       "dropOverlay": "Drop audio files to upload",
       "filePickerFilter": "Audio files",
       "empty": "No uploads yet. Drop audio files here to get transcripts.",
@@ -700,6 +701,7 @@
       "retry": "Retry",
       "delete": "Delete",
       "deleteConfirm": "Delete this audio and its transcript?",
+      "deleteLocalConfirm": "Да премахна ли този запис от списъка? Транскрипцията остава на сървъра.",
       "readyToast": "{{name}} — transcript ready",
       "failedToast": "{{name}} — transcription failed",
       "status": {
@@ -722,7 +724,74 @@
         "transcription_failed": "Transcription failed",
         "consultation_deleted": "Deleted on the server",
         "deleteFailed": "Failed to delete. Try again.",
-        "audioUnavailable": "Audio is not available yet"
+        "audioUnavailable": "Audio is not available yet",
+        "file_too_large": "Файлът надвишава лимита от 200 МБ",
+        "job_deleted": "Изтрито на сървъра"
+      }
+    },
+    "dictation": {
+      "title": "Гласови команди",
+      "addCommand": "Добавяне на команда",
+      "authRequired": "Влезте в сървъра за транскрипция от общите настройки, за да управлявате командите.",
+      "searchPlaceholder": "Търсене на команди и фрази...",
+      "filters": {
+        "allSources": "Всички команди",
+        "allTypes": "Всички типове",
+        "allLanguages": "Всички езици"
+      },
+      "total": "Общо: {{count}}",
+      "loading": "Зареждане...",
+      "empty": "Нищо не е намерено",
+      "loadMore": "Покажи още",
+      "badge": {
+        "global": "Стандартна",
+        "user": "Моя"
+      },
+      "phraseCount": "{{enabled}}/{{total}} фрази",
+      "disableCommand": "Изключи за мен",
+      "enableCommand": "Включи",
+      "delete": "Изтриване на командата",
+      "deleteCommandConfirm": "Да изтрия ли командата „{{name}}“ с всичките ѝ фрази?",
+      "deleted": "Командата е изтрита",
+      "edit": "Редактиране",
+      "save": "Запази",
+      "saving": "Запазване...",
+      "cancel": "Отказ",
+      "create": "Създай",
+      "created": "Командата е създадена",
+      "createTitle": "Нова команда",
+      "form": {
+        "name": "Име на командата",
+        "replacement": "Текст за замяна",
+        "phrases": "Гласови фрази (поне една)"
+      },
+      "phrasePlaceholder": "Гласова фраза, напр. „нов ред“",
+      "addPhrase": "Добави",
+      "addPhraseRow": "Още фраза",
+      "disablePhrase": "Изключи фразата за мен",
+      "enablePhrase": "Включи фразата",
+      "deletePhrase": "Изтрий фразата",
+      "opType": {
+        "insert_text": "Вмъкване на текст",
+        "opening_mark": "Отварящ знак",
+        "closing_mark": "Затварящ знак",
+        "sentence_terminator": "Край на изречение",
+        "toggle_mark": "Двойков знак",
+        "newline": "Нов ред",
+        "paragraph": "Нов абзац"
+      },
+      "opTypeHint": {
+        "insert_text": "Вмъква текста като отделна дума или блок.",
+        "opening_mark": "Знакът се залепя за следващата дума, напр. отваряща скоба.",
+        "closing_mark": "Знакът се залепя за предишната дума, напр. запетая или затваряща скоба.",
+        "sentence_terminator": "Завършва изречението; следващата дума започва с главна буква.",
+        "toggle_mark": "Последователно отваря и затваря двойков знак, напр. кавички.",
+        "newline": "Започва нов ред. Не изисква текст за замяна.",
+        "paragraph": "Започва нов абзац. Не изисква текст за замяна."
+      },
+      "errors": {
+        "duplicate": "Такава фраза вече съществува",
+        "generic": "Нещо се обърка. Опитайте отново."
       }
     }
   },

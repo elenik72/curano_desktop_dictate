@@ -379,6 +379,53 @@ jobs:
           assetNamePattern: ${{ steps.patch-release-name.outputs.platform }}
           args: ${{ inputs.build-args }}
 
+      # Tauri notarizes and staples the .app before creating the DMG, but the
+      # resulting disk image itself still needs its own notarization ticket.
+      # Replace the asset uploaded by tauri-action only after the DMG passes
+      # both stapler validation and Gatekeeper assessment.
+      - name: Notarize and staple macOS DMG
+        if: contains(inputs.platform, 'macos') && inputs.sign-binaries
+        shell: bash
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          dmg_dir="src-tauri/target/${{ inputs.target }}/${{ steps.build-profile.outputs.profile }}/bundle/dmg"
+          shopt -s nullglob
+          dmg_files=("$dmg_dir"/*.dmg)
+
+          if (( ${#dmg_files[@]} == 0 )); then
+            echo "No macOS DMG found in $dmg_dir"
+            exit 1
+          fi
+
+          for dmg in "${dmg_files[@]}"; do
+            echo "Notarizing $(basename "$dmg")"
+            xcrun notarytool submit "$dmg" \
+              --apple-id "$APPLE_ID" \
+              --password "$APPLE_PASSWORD" \
+              --team-id "$APPLE_TEAM_ID" \
+              --wait
+
+            xcrun stapler staple "$dmg"
+            xcrun stapler validate "$dmg"
+            spctl --assess --verbose=2 \
+              --type open \
+              --context context:primary-signature \
+              "$dmg"
+
+            if [[ -n "${{ inputs.release-id }}" ]]; then
+              gh release upload \
+                "v${{ steps.get-version.outputs.version }}" \
+                "$dmg" \
+                --clobber
+            fi
+          done
+
       - name: Verify macOS dylib bundling
         if: inputs.target == 'x86_64-apple-darwin'
         shell: bash

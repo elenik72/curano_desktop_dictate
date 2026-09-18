@@ -16,7 +16,8 @@
     "history": "Histórico",
     "debug": "Depuração",
     "about": "Sobre",
-    "transcripts": "Transcripts"
+    "transcripts": "Transcripts",
+    "dictation": "Comandos de voz"
   },
   "onboarding": {
     "subtitle": "Para começar, escolha um modelo de transcrição",
@@ -684,7 +685,7 @@
     "transcripts": {
       "title": "Audio transcripts",
       "dropTitle": "Drag audio files here or click to choose",
-      "dropHint": "mp3, m4a, wav, ogg, flac and more · up to 10 files at once",
+      "dropHint": "mp3, m4a, wav, mp4 · até 10 ficheiros · até 200 MB cada",
       "dropOverlay": "Drop audio files to upload",
       "filePickerFilter": "Audio files",
       "empty": "No uploads yet. Drop audio files here to get transcripts.",
@@ -700,6 +701,7 @@
       "retry": "Retry",
       "delete": "Delete",
       "deleteConfirm": "Delete this audio and its transcript?",
+      "deleteLocalConfirm": "Remover esta gravação da lista? A transcrição permanece no servidor.",
       "readyToast": "{{name}} — transcript ready",
       "failedToast": "{{name}} — transcription failed",
       "status": {
@@ -722,7 +724,74 @@
         "transcription_failed": "Transcription failed",
         "consultation_deleted": "Deleted on the server",
         "deleteFailed": "Failed to delete. Try again.",
-        "audioUnavailable": "Audio is not available yet"
+        "audioUnavailable": "Audio is not available yet",
+        "file_too_large": "O ficheiro excede o limite de 200 MB",
+        "job_deleted": "Eliminado no servidor"
+      }
+    },
+    "dictation": {
+      "title": "Comandos de voz",
+      "addCommand": "Adicionar comando",
+      "authRequired": "Inicie sessão no servidor de transcrição nas definições gerais para gerir os comandos.",
+      "searchPlaceholder": "Pesquisar comandos e frases...",
+      "filters": {
+        "allSources": "Todos os comandos",
+        "allTypes": "Todos os tipos",
+        "allLanguages": "Todos os idiomas"
+      },
+      "total": "Total: {{count}}",
+      "loading": "A carregar...",
+      "empty": "Nada encontrado",
+      "loadMore": "Mostrar mais",
+      "badge": {
+        "global": "Padrão",
+        "user": "Meu"
+      },
+      "phraseCount": "{{enabled}}/{{total}} frases",
+      "disableCommand": "Desativar para mim",
+      "enableCommand": "Ativar",
+      "delete": "Eliminar comando",
+      "deleteCommandConfirm": "Eliminar o comando “{{name}}” com todas as suas frases?",
+      "deleted": "Comando eliminado",
+      "edit": "Editar",
+      "save": "Guardar",
+      "saving": "A guardar...",
+      "cancel": "Cancelar",
+      "create": "Criar",
+      "created": "Comando criado",
+      "createTitle": "Novo comando",
+      "form": {
+        "name": "Nome do comando",
+        "replacement": "Texto de substituição",
+        "phrases": "Frases de voz (pelo menos uma)"
+      },
+      "phrasePlaceholder": "Frase de voz, p. ex. «nova linha»",
+      "addPhrase": "Adicionar",
+      "addPhraseRow": "Outra frase",
+      "disablePhrase": "Desativar a frase para mim",
+      "enablePhrase": "Ativar a frase",
+      "deletePhrase": "Eliminar a frase",
+      "opType": {
+        "insert_text": "Inserir texto",
+        "opening_mark": "Sinal de abertura",
+        "closing_mark": "Sinal de fecho",
+        "sentence_terminator": "Fim de frase",
+        "toggle_mark": "Sinal emparelhado",
+        "newline": "Nova linha",
+        "paragraph": "Novo parágrafo"
+      },
+      "opTypeHint": {
+        "insert_text": "Insere o texto como palavra ou bloco separado.",
+        "opening_mark": "O sinal junta-se à palavra seguinte, p. ex. parêntese de abertura.",
+        "closing_mark": "O sinal junta-se à palavra anterior, p. ex. vírgula ou parêntese de fecho.",
+        "sentence_terminator": "Termina a frase; a palavra seguinte começa com maiúscula.",
+        "toggle_mark": "Abre e fecha alternadamente um sinal emparelhado, p. ex. aspas.",
+        "newline": "Começa uma nova linha. Não requer texto de substituição.",
+        "paragraph": "Começa um novo parágrafo. Não requer texto de substituição."
+      },
+      "errors": {
+        "duplicate": "Essa frase já existe",
+        "generic": "Algo correu mal. Tente novamente."
       }
     }
   },

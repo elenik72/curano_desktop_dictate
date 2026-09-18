@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import {
   Cog,
   FileAudio,
+  SpellCheck,
   FlaskConical,
   History,
   Info,
@@ -16,6 +17,7 @@ import {
   AdvancedSettings,
   HistorySettings,
   TranscriptsSettings,
+  DictationSettings,
   DebugSettings,
   AboutSettings,
   PostProcessingSettings,
@@ -68,6 +70,12 @@ export const SECTIONS_CONFIG = {
     labelKey: "sidebar.transcripts",
     icon: FileAudio,
     component: TranscriptsSettings,
+    enabled: () => true,
+  },
+  dictation: {
+    labelKey: "sidebar.dictation",
+    icon: SpellCheck,
+    component: DictationSettings,
     enabled: () => true,
   },
   postprocessing: {

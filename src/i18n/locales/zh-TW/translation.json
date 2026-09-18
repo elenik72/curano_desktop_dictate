@@ -16,7 +16,8 @@
     "history": "歷史紀錄",
     "debug": "偵錯",
     "about": "關於",
-    "transcripts": "Transcripts"
+    "transcripts": "Transcripts",
+    "dictation": "語音指令"
   },
   "onboarding": {
     "subtitle": "首先，請選擇一種模型",
@@ -684,7 +685,7 @@
     "transcripts": {
       "title": "Audio transcripts",
       "dropTitle": "Drag audio files here or click to choose",
-      "dropHint": "mp3, m4a, wav, ogg, flac and more · up to 10 files at once",
+      "dropHint": "mp3、m4a、wav、mp4 · 最多10個檔案 · 每個最大200 MB",
       "dropOverlay": "Drop audio files to upload",
       "filePickerFilter": "Audio files",
       "empty": "No uploads yet. Drop audio files here to get transcripts.",
@@ -700,6 +701,7 @@
       "retry": "Retry",
       "delete": "Delete",
       "deleteConfirm": "Delete this audio and its transcript?",
+      "deleteLocalConfirm": "從清單中移除此錄音?轉寫文字仍保留在伺服器上。",
       "readyToast": "{{name}} — transcript ready",
       "failedToast": "{{name}} — transcription failed",
       "status": {
@@ -722,7 +724,74 @@
         "transcription_failed": "Transcription failed",
         "consultation_deleted": "Deleted on the server",
         "deleteFailed": "Failed to delete. Try again.",
-        "audioUnavailable": "Audio is not available yet"
+        "audioUnavailable": "Audio is not available yet",
+        "file_too_large": "檔案超過200 MB限制",
+        "job_deleted": "已在伺服器上刪除"
+      }
+    },
+    "dictation": {
+      "title": "語音指令",
+      "addCommand": "新增指令",
+      "authRequired": "請在一般設定中登入轉寫伺服器以管理指令。",
+      "searchPlaceholder": "搜尋指令和片語...",
+      "filters": {
+        "allSources": "全部指令",
+        "allTypes": "全部類型",
+        "allLanguages": "全部語言"
+      },
+      "total": "共 {{count}} 條",
+      "loading": "載入中...",
+      "empty": "找不到內容",
+      "loadMore": "顯示更多",
+      "badge": {
+        "global": "標準",
+        "user": "我的"
+      },
+      "phraseCount": "{{enabled}}/{{total}} 條片語",
+      "disableCommand": "對我停用",
+      "enableCommand": "啟用",
+      "delete": "刪除指令",
+      "deleteCommandConfirm": "刪除指令「{{name}}」及其所有片語?",
+      "deleted": "指令已刪除",
+      "edit": "編輯",
+      "save": "儲存",
+      "saving": "儲存中...",
+      "cancel": "取消",
+      "create": "建立",
+      "created": "指令已建立",
+      "createTitle": "新指令",
+      "form": {
+        "name": "指令名稱",
+        "replacement": "替換文字",
+        "phrases": "語音片語(至少一條)"
+      },
+      "phrasePlaceholder": "語音片語,例如「換行」",
+      "addPhrase": "新增",
+      "addPhraseRow": "再加一條片語",
+      "disablePhrase": "對我停用該片語",
+      "enablePhrase": "啟用該片語",
+      "deletePhrase": "刪除該片語",
+      "opType": {
+        "insert_text": "插入文字",
+        "opening_mark": "開符號",
+        "closing_mark": "閉符號",
+        "sentence_terminator": "句末",
+        "toggle_mark": "成對符號",
+        "newline": "換行",
+        "paragraph": "新段落"
+      },
+      "opTypeHint": {
+        "insert_text": "將文字作為獨立的詞或區塊插入。",
+        "opening_mark": "符號附著到下一個詞,例如左括號。",
+        "closing_mark": "符號附著到上一個詞,例如逗號或右括號。",
+        "sentence_terminator": "結束句子;下一個詞以大寫字母開頭。",
+        "toggle_mark": "交替開合成對符號,例如引號。",
+        "newline": "開始新行。無需替換文字。",
+        "paragraph": "開始新段落。無需替換文字。"
+      },
+      "errors": {
+        "duplicate": "該片語已存在",
+        "generic": "發生問題,請重試。"
       }
     }
   },

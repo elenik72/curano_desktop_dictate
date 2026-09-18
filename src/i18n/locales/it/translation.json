@@ -16,7 +16,8 @@
     "history": "Cronologia",
     "debug": "Debug",
     "about": "Informazioni",
-    "transcripts": "Transcripts"
+    "transcripts": "Transcripts",
+    "dictation": "Comandi vocali"
   },
   "onboarding": {
     "subtitle": "Per cominciare, scegli un modello di riconoscimento vocale",
@@ -684,7 +685,7 @@
     "transcripts": {
       "title": "Audio transcripts",
       "dropTitle": "Drag audio files here or click to choose",
-      "dropHint": "mp3, m4a, wav, ogg, flac and more · up to 10 files at once",
+      "dropHint": "mp3, m4a, wav, mp4 · fino a 10 file · fino a 200 MB ciascuno",
       "dropOverlay": "Drop audio files to upload",
       "filePickerFilter": "Audio files",
       "empty": "No uploads yet. Drop audio files here to get transcripts.",
@@ -700,6 +701,7 @@
       "retry": "Retry",
       "delete": "Delete",
       "deleteConfirm": "Delete this audio and its transcript?",
+      "deleteLocalConfirm": "Rimuovere questa registrazione dall'elenco? La trascrizione resta sul server.",
       "readyToast": "{{name}} — transcript ready",
       "failedToast": "{{name}} — transcription failed",
       "status": {
@@ -722,7 +724,74 @@
         "transcription_failed": "Transcription failed",
         "consultation_deleted": "Deleted on the server",
         "deleteFailed": "Failed to delete. Try again.",
-        "audioUnavailable": "Audio is not available yet"
+        "audioUnavailable": "Audio is not available yet",
+        "file_too_large": "Il file supera il limite di 200 MB",
+        "job_deleted": "Eliminato sul server"
+      }
+    },
+    "dictation": {
+      "title": "Comandi vocali",
+      "addCommand": "Aggiungi comando",
+      "authRequired": "Accedi al server di trascrizione nelle impostazioni generali per gestire i comandi.",
+      "searchPlaceholder": "Cerca comandi e frasi...",
+      "filters": {
+        "allSources": "Tutti i comandi",
+        "allTypes": "Tutti i tipi",
+        "allLanguages": "Tutte le lingue"
+      },
+      "total": "Totale: {{count}}",
+      "loading": "Caricamento...",
+      "empty": "Nessun risultato",
+      "loadMore": "Mostra altri",
+      "badge": {
+        "global": "Standard",
+        "user": "Mio"
+      },
+      "phraseCount": "{{enabled}}/{{total}} frasi",
+      "disableCommand": "Disattiva per me",
+      "enableCommand": "Attiva",
+      "delete": "Elimina comando",
+      "deleteCommandConfirm": "Eliminare il comando “{{name}}” con tutte le sue frasi?",
+      "deleted": "Comando eliminato",
+      "edit": "Modifica",
+      "save": "Salva",
+      "saving": "Salvataggio...",
+      "cancel": "Annulla",
+      "create": "Crea",
+      "created": "Comando creato",
+      "createTitle": "Nuovo comando",
+      "form": {
+        "name": "Nome del comando",
+        "replacement": "Testo di sostituzione",
+        "phrases": "Frasi vocali (almeno una)"
+      },
+      "phrasePlaceholder": "Frase vocale, es. “a capo”",
+      "addPhrase": "Aggiungi",
+      "addPhraseRow": "Altra frase",
+      "disablePhrase": "Disattiva frase per me",
+      "enablePhrase": "Attiva frase",
+      "deletePhrase": "Elimina frase",
+      "opType": {
+        "insert_text": "Inserisci testo",
+        "opening_mark": "Segno di apertura",
+        "closing_mark": "Segno di chiusura",
+        "sentence_terminator": "Fine frase",
+        "toggle_mark": "Segno accoppiato",
+        "newline": "Nuova riga",
+        "paragraph": "Nuovo paragrafo"
+      },
+      "opTypeHint": {
+        "insert_text": "Inserisce il testo come parola o blocco separato.",
+        "opening_mark": "Il segno si attacca alla parola successiva, es. parentesi aperta.",
+        "closing_mark": "Il segno si attacca alla parola precedente, es. virgola o parentesi chiusa.",
+        "sentence_terminator": "Termina la frase; la parola successiva inizia con la maiuscola.",
+        "toggle_mark": "Apre e chiude alternativamente un segno accoppiato, es. virgolette.",
+        "newline": "Inizia una nuova riga. Nessun testo di sostituzione necessario.",
+        "paragraph": "Inizia un nuovo paragrafo. Nessun testo di sostituzione necessario."
+      },
+      "errors": {
+        "duplicate": "Questa frase esiste già",
+        "generic": "Qualcosa è andato storto. Riprova."
       }
     }
   },

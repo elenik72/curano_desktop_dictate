@@ -15,6 +15,7 @@
     "postProcessing": "Post Process",
     "history": "History",
     "transcripts": "Transcripts",
+    "dictation": "Voice commands",
     "debug": "Debug",
     "about": "About"
   },
@@ -566,7 +567,7 @@
     "transcripts": {
       "title": "Audio transcripts",
       "dropTitle": "Drag audio files here or click to choose",
-      "dropHint": "mp3, m4a, wav, ogg, flac and more · up to 10 files at once",
+      "dropHint": "mp3, m4a, wav, mp4 · up to 10 files · up to 200 MB each",
       "dropOverlay": "Drop audio files to upload",
       "filePickerFilter": "Audio files",
       "empty": "No uploads yet. Drop audio files here to get transcripts.",
@@ -582,6 +583,7 @@
       "retry": "Retry",
       "delete": "Delete",
       "deleteConfirm": "Delete this audio and its transcript?",
+      "deleteLocalConfirm": "Remove this recording from the list? The transcript stays on the server.",
       "readyToast": "{{name}} — transcript ready",
       "failedToast": "{{name}} — transcription failed",
       "status": {
@@ -604,7 +606,74 @@
         "transcription_failed": "Transcription failed",
         "consultation_deleted": "Deleted on the server",
         "deleteFailed": "Failed to delete. Try again.",
-        "audioUnavailable": "Audio is not available yet"
+        "audioUnavailable": "Audio is not available yet",
+        "file_too_large": "File exceeds the 200 MB limit",
+        "job_deleted": "Deleted on the server"
+      }
+    },
+    "dictation": {
+      "title": "Voice commands",
+      "addCommand": "Add command",
+      "authRequired": "Sign in to the transcription server in General settings to manage commands.",
+      "searchPlaceholder": "Search commands and phrases...",
+      "filters": {
+        "allSources": "All commands",
+        "allTypes": "All types",
+        "allLanguages": "All languages"
+      },
+      "total": "Total: {{count}}",
+      "loading": "Loading...",
+      "empty": "Nothing found",
+      "loadMore": "Load more",
+      "badge": {
+        "global": "Standard",
+        "user": "Mine"
+      },
+      "phraseCount": "{{enabled}}/{{total}} phrases",
+      "disableCommand": "Disable for me",
+      "enableCommand": "Enable",
+      "delete": "Delete command",
+      "deleteCommandConfirm": "Delete command “{{name}}” with all its phrases?",
+      "deleted": "Command deleted",
+      "edit": "Edit",
+      "save": "Save",
+      "saving": "Saving...",
+      "cancel": "Cancel",
+      "create": "Create",
+      "created": "Command created",
+      "createTitle": "New command",
+      "form": {
+        "name": "Command name",
+        "replacement": "Replacement text",
+        "phrases": "Voice phrases (at least one)"
+      },
+      "phrasePlaceholder": "Voice phrase, e.g. “new line”",
+      "addPhrase": "Add",
+      "addPhraseRow": "Another phrase",
+      "disablePhrase": "Disable phrase for me",
+      "enablePhrase": "Enable phrase",
+      "deletePhrase": "Delete phrase",
+      "opType": {
+        "insert_text": "Insert text",
+        "opening_mark": "Opening mark",
+        "closing_mark": "Closing mark",
+        "sentence_terminator": "End of sentence",
+        "toggle_mark": "Paired mark",
+        "newline": "New line",
+        "paragraph": "New paragraph"
+      },
+      "opTypeHint": {
+        "insert_text": "Inserts the text as a separate word or block.",
+        "opening_mark": "The mark attaches to the next word, e.g. an opening bracket.",
+        "closing_mark": "The mark attaches to the previous word, e.g. a comma or closing bracket.",
+        "sentence_terminator": "Ends the sentence; the next word starts with a capital letter.",
+        "toggle_mark": "Alternately opens and closes a paired mark, e.g. quotes.",
+        "newline": "Starts a new line. No replacement text needed.",
+        "paragraph": "Starts a new paragraph. No replacement text needed."
+      },
+      "errors": {
+        "duplicate": "Such a phrase already exists",
+        "generic": "Something went wrong. Try again."
       }
     },
     "debug": {

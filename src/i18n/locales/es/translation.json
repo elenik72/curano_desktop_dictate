@@ -16,7 +16,8 @@
     "history": "Historial",
     "debug": "Depuración",
     "about": "Acerca de",
-    "transcripts": "Transcripts"
+    "transcripts": "Transcripts",
+    "dictation": "Comandos de voz"
   },
   "onboarding": {
     "subtitle": "Para comenzar, elige un modelo de transcripción",
@@ -684,7 +685,7 @@
     "transcripts": {
       "title": "Audio transcripts",
       "dropTitle": "Drag audio files here or click to choose",
-      "dropHint": "mp3, m4a, wav, ogg, flac and more · up to 10 files at once",
+      "dropHint": "mp3, m4a, wav, mp4 · hasta 10 archivos · hasta 200 MB cada uno",
       "dropOverlay": "Drop audio files to upload",
       "filePickerFilter": "Audio files",
       "empty": "No uploads yet. Drop audio files here to get transcripts.",
@@ -700,6 +701,7 @@
       "retry": "Retry",
       "delete": "Delete",
       "deleteConfirm": "Delete this audio and its transcript?",
+      "deleteLocalConfirm": "¿Quitar esta grabación de la lista? La transcripción permanece en el servidor.",
       "readyToast": "{{name}} — transcript ready",
       "failedToast": "{{name}} — transcription failed",
       "status": {
@@ -722,7 +724,74 @@
         "transcription_failed": "Transcription failed",
         "consultation_deleted": "Deleted on the server",
         "deleteFailed": "Failed to delete. Try again.",
-        "audioUnavailable": "Audio is not available yet"
+        "audioUnavailable": "Audio is not available yet",
+        "file_too_large": "El archivo supera el límite de 200 MB",
+        "job_deleted": "Eliminado en el servidor"
+      }
+    },
+    "dictation": {
+      "title": "Comandos de voz",
+      "addCommand": "Añadir comando",
+      "authRequired": "Inicie sesión en el servidor de transcripción en los ajustes generales para gestionar los comandos.",
+      "searchPlaceholder": "Buscar comandos y frases...",
+      "filters": {
+        "allSources": "Todos los comandos",
+        "allTypes": "Todos los tipos",
+        "allLanguages": "Todos los idiomas"
+      },
+      "total": "Total: {{count}}",
+      "loading": "Cargando...",
+      "empty": "No se encontró nada",
+      "loadMore": "Mostrar más",
+      "badge": {
+        "global": "Estándar",
+        "user": "Mío"
+      },
+      "phraseCount": "{{enabled}}/{{total}} frases",
+      "disableCommand": "Desactivar para mí",
+      "enableCommand": "Activar",
+      "delete": "Eliminar comando",
+      "deleteCommandConfirm": "¿Eliminar el comando “{{name}}” con todas sus frases?",
+      "deleted": "Comando eliminado",
+      "edit": "Editar",
+      "save": "Guardar",
+      "saving": "Guardando...",
+      "cancel": "Cancelar",
+      "create": "Crear",
+      "created": "Comando creado",
+      "createTitle": "Nuevo comando",
+      "form": {
+        "name": "Nombre del comando",
+        "replacement": "Texto de sustitución",
+        "phrases": "Frases de voz (al menos una)"
+      },
+      "phrasePlaceholder": "Frase de voz, p. ej. «nueva línea»",
+      "addPhrase": "Añadir",
+      "addPhraseRow": "Otra frase",
+      "disablePhrase": "Desactivar la frase para mí",
+      "enablePhrase": "Activar la frase",
+      "deletePhrase": "Eliminar la frase",
+      "opType": {
+        "insert_text": "Insertar texto",
+        "opening_mark": "Signo de apertura",
+        "closing_mark": "Signo de cierre",
+        "sentence_terminator": "Fin de frase",
+        "toggle_mark": "Signo pareado",
+        "newline": "Nueva línea",
+        "paragraph": "Nuevo párrafo"
+      },
+      "opTypeHint": {
+        "insert_text": "Inserta el texto como palabra o bloque separado.",
+        "opening_mark": "El signo se une a la palabra siguiente, p. ej. paréntesis de apertura.",
+        "closing_mark": "El signo se une a la palabra anterior, p. ej. coma o paréntesis de cierre.",
+        "sentence_terminator": "Termina la frase; la siguiente palabra empieza con mayúscula.",
+        "toggle_mark": "Abre y cierra alternativamente un signo pareado, p. ej. comillas.",
+        "newline": "Comienza una nueva línea. No requiere texto de sustitución.",
+        "paragraph": "Comienza un nuevo párrafo. No requiere texto de sustitución."
+      },
+      "errors": {
+        "duplicate": "Esa frase ya existe",
+        "generic": "Algo salió mal. Inténtelo de nuevo."
       }
     }
   },

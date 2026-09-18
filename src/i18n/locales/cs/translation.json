@@ -16,7 +16,8 @@
     "history": "Historie",
     "debug": "Ladění",
     "about": "O aplikaci",
-    "transcripts": "Transcripts"
+    "transcripts": "Transcripts",
+    "dictation": "Hlasové příkazy"
   },
   "onboarding": {
     "subtitle": "Pro začátek vyberte model pro přepis",
@@ -684,7 +685,7 @@
     "transcripts": {
       "title": "Audio transcripts",
       "dropTitle": "Drag audio files here or click to choose",
-      "dropHint": "mp3, m4a, wav, ogg, flac and more · up to 10 files at once",
+      "dropHint": "mp3, m4a, wav, mp4 · až 10 souborů · až 200 MB každý",
       "dropOverlay": "Drop audio files to upload",
       "filePickerFilter": "Audio files",
       "empty": "No uploads yet. Drop audio files here to get transcripts.",
@@ -700,6 +701,7 @@
       "retry": "Retry",
       "delete": "Delete",
       "deleteConfirm": "Delete this audio and its transcript?",
+      "deleteLocalConfirm": "Odebrat tuto nahrávku ze seznamu? Přepis zůstane na serveru.",
       "readyToast": "{{name}} — transcript ready",
       "failedToast": "{{name}} — transcription failed",
       "status": {
@@ -722,7 +724,74 @@
         "transcription_failed": "Transcription failed",
         "consultation_deleted": "Deleted on the server",
         "deleteFailed": "Failed to delete. Try again.",
-        "audioUnavailable": "Audio is not available yet"
+        "audioUnavailable": "Audio is not available yet",
+        "file_too_large": "Soubor překračuje limit 200 MB",
+        "job_deleted": "Smazáno na serveru"
+      }
+    },
+    "dictation": {
+      "title": "Hlasové příkazy",
+      "addCommand": "Přidat příkaz",
+      "authRequired": "Pro správu příkazů se přihlaste k přepisovacímu serveru v obecných nastaveních.",
+      "searchPlaceholder": "Hledat příkazy a fráze...",
+      "filters": {
+        "allSources": "Všechny příkazy",
+        "allTypes": "Všechny typy",
+        "allLanguages": "Všechny jazyky"
+      },
+      "total": "Celkem: {{count}}",
+      "loading": "Načítání...",
+      "empty": "Nic nenalezeno",
+      "loadMore": "Zobrazit více",
+      "badge": {
+        "global": "Standardní",
+        "user": "Moje"
+      },
+      "phraseCount": "{{enabled}}/{{total}} frází",
+      "disableCommand": "Vypnout pro mě",
+      "enableCommand": "Zapnout",
+      "delete": "Smazat příkaz",
+      "deleteCommandConfirm": "Smazat příkaz „{{name}}“ se všemi frázemi?",
+      "deleted": "Příkaz smazán",
+      "edit": "Upravit",
+      "save": "Uložit",
+      "saving": "Ukládání...",
+      "cancel": "Zrušit",
+      "create": "Vytvořit",
+      "created": "Příkaz vytvořen",
+      "createTitle": "Nový příkaz",
+      "form": {
+        "name": "Název příkazu",
+        "replacement": "Text náhrady",
+        "phrases": "Hlasové fráze (alespoň jedna)"
+      },
+      "phrasePlaceholder": "Hlasová fráze, např. „nový řádek“",
+      "addPhrase": "Přidat",
+      "addPhraseRow": "Další fráze",
+      "disablePhrase": "Vypnout frázi pro mě",
+      "enablePhrase": "Zapnout frázi",
+      "deletePhrase": "Smazat frázi",
+      "opType": {
+        "insert_text": "Vložit text",
+        "opening_mark": "Otevírací znak",
+        "closing_mark": "Zavírací znak",
+        "sentence_terminator": "Konec věty",
+        "toggle_mark": "Párový znak",
+        "newline": "Nový řádek",
+        "paragraph": "Nový odstavec"
+      },
+      "opTypeHint": {
+        "insert_text": "Vloží text jako samostatné slovo nebo blok.",
+        "opening_mark": "Znak se připojí k následujícímu slovu, např. otevírací závorka.",
+        "closing_mark": "Znak se připojí k předchozímu slovu, např. čárka nebo zavírací závorka.",
+        "sentence_terminator": "Ukončí větu; další slovo začíná velkým písmenem.",
+        "toggle_mark": "Střídavě otevírá a zavírá párový znak, např. uvozovky.",
+        "newline": "Začne nový řádek. Text náhrady není potřeba.",
+        "paragraph": "Začne nový odstavec. Text náhrady není potřeba."
+      },
+      "errors": {
+        "duplicate": "Taková fráze již existuje",
+        "generic": "Něco se pokazilo. Zkuste to znovu."
       }
     }
   },

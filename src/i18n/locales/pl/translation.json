@@ -16,7 +16,8 @@
     "history": "Historia",
     "debug": "Debugowanie",
     "about": "O programie",
-    "transcripts": "Transcripts"
+    "transcripts": "Transcripts",
+    "dictation": "Polecenia głosowe"
   },
   "onboarding": {
     "subtitle": "Aby rozpocząć, wybierz model transkrypcji",
@@ -684,7 +685,7 @@
     "transcripts": {
       "title": "Audio transcripts",
       "dropTitle": "Drag audio files here or click to choose",
-      "dropHint": "mp3, m4a, wav, ogg, flac and more · up to 10 files at once",
+      "dropHint": "mp3, m4a, wav, mp4 · do 10 plików · do 200 MB każdy",
       "dropOverlay": "Drop audio files to upload",
       "filePickerFilter": "Audio files",
       "empty": "No uploads yet. Drop audio files here to get transcripts.",
@@ -700,6 +701,7 @@
       "retry": "Retry",
       "delete": "Delete",
       "deleteConfirm": "Delete this audio and its transcript?",
+      "deleteLocalConfirm": "Usunąć to nagranie z listy? Transkrypcja pozostanie na serwerze.",
       "readyToast": "{{name}} — transcript ready",
       "failedToast": "{{name}} — transcription failed",
       "status": {
@@ -722,7 +724,74 @@
         "transcription_failed": "Transcription failed",
         "consultation_deleted": "Deleted on the server",
         "deleteFailed": "Failed to delete. Try again.",
-        "audioUnavailable": "Audio is not available yet"
+        "audioUnavailable": "Audio is not available yet",
+        "file_too_large": "Plik przekracza limit 200 MB",
+        "job_deleted": "Usunięto na serwerze"
+      }
+    },
+    "dictation": {
+      "title": "Polecenia głosowe",
+      "addCommand": "Dodaj polecenie",
+      "authRequired": "Zaloguj się do serwera transkrypcji w ustawieniach ogólnych, aby zarządzać poleceniami.",
+      "searchPlaceholder": "Szukaj poleceń i fraz...",
+      "filters": {
+        "allSources": "Wszystkie polecenia",
+        "allTypes": "Wszystkie typy",
+        "allLanguages": "Wszystkie języki"
+      },
+      "total": "Łącznie: {{count}}",
+      "loading": "Ładowanie...",
+      "empty": "Nic nie znaleziono",
+      "loadMore": "Pokaż więcej",
+      "badge": {
+        "global": "Standardowe",
+        "user": "Moje"
+      },
+      "phraseCount": "{{enabled}}/{{total}} fraz",
+      "disableCommand": "Wyłącz dla mnie",
+      "enableCommand": "Włącz",
+      "delete": "Usuń polecenie",
+      "deleteCommandConfirm": "Usunąć polecenie „{{name}}” wraz ze wszystkimi frazami?",
+      "deleted": "Polecenie usunięte",
+      "edit": "Edytuj",
+      "save": "Zapisz",
+      "saving": "Zapisywanie...",
+      "cancel": "Anuluj",
+      "create": "Utwórz",
+      "created": "Polecenie utworzone",
+      "createTitle": "Nowe polecenie",
+      "form": {
+        "name": "Nazwa polecenia",
+        "replacement": "Tekst zastępczy",
+        "phrases": "Frazy głosowe (co najmniej jedna)"
+      },
+      "phrasePlaceholder": "Fraza głosowa, np. „nowa linia”",
+      "addPhrase": "Dodaj",
+      "addPhraseRow": "Kolejna fraza",
+      "disablePhrase": "Wyłącz frazę dla mnie",
+      "enablePhrase": "Włącz frazę",
+      "deletePhrase": "Usuń frazę",
+      "opType": {
+        "insert_text": "Wstaw tekst",
+        "opening_mark": "Znak otwierający",
+        "closing_mark": "Znak zamykający",
+        "sentence_terminator": "Koniec zdania",
+        "toggle_mark": "Znak parzysty",
+        "newline": "Nowa linia",
+        "paragraph": "Nowy akapit"
+      },
+      "opTypeHint": {
+        "insert_text": "Wstawia tekst jako osobne słowo lub blok.",
+        "opening_mark": "Znak dokleja się do następnego słowa, np. nawias otwierający.",
+        "closing_mark": "Znak dokleja się do poprzedniego słowa, np. przecinek lub nawias zamykający.",
+        "sentence_terminator": "Kończy zdanie; następne słowo zaczyna się wielką literą.",
+        "toggle_mark": "Na przemian otwiera i zamyka znak parzysty, np. cudzysłów.",
+        "newline": "Rozpoczyna nową linię. Tekst zastępczy nie jest wymagany.",
+        "paragraph": "Rozpoczyna nowy akapit. Tekst zastępczy nie jest wymagany."
+      },
+      "errors": {
+        "duplicate": "Taka fraza już istnieje",
+        "generic": "Coś poszło nie tak. Spróbuj ponownie."
       }
     }
   },

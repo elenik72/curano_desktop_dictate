@@ -16,7 +16,8 @@
     "history": "היסטוריה",
     "debug": "ניפוי שגיאות",
     "about": "אודות",
-    "transcripts": "Transcripts"
+    "transcripts": "Transcripts",
+    "dictation": "פקודות קוליות"
   },
   "onboarding": {
     "subtitle": "כדי להתחיל, בחר מודל תמלול",
@@ -684,7 +685,7 @@
     "transcripts": {
       "title": "Audio transcripts",
       "dropTitle": "Drag audio files here or click to choose",
-      "dropHint": "mp3, m4a, wav, ogg, flac and more · up to 10 files at once",
+      "dropHint": "mp3, m4a, wav, mp4 · עד 10 קבצים · עד 200 MB לקובץ",
       "dropOverlay": "Drop audio files to upload",
       "filePickerFilter": "Audio files",
       "empty": "No uploads yet. Drop audio files here to get transcripts.",
@@ -700,6 +701,7 @@
       "retry": "Retry",
       "delete": "Delete",
       "deleteConfirm": "Delete this audio and its transcript?",
+      "deleteLocalConfirm": "להסיר את ההקלטה מהרשימה? התמלול יישאר בשרת.",
       "readyToast": "{{name}} — transcript ready",
       "failedToast": "{{name}} — transcription failed",
       "status": {
@@ -722,7 +724,74 @@
         "transcription_failed": "Transcription failed",
         "consultation_deleted": "Deleted on the server",
         "deleteFailed": "Failed to delete. Try again.",
-        "audioUnavailable": "Audio is not available yet"
+        "audioUnavailable": "Audio is not available yet",
+        "file_too_large": "הקובץ חורג ממגבלת 200 MB",
+        "job_deleted": "נמחק בשרת"
+      }
+    },
+    "dictation": {
+      "title": "פקודות קוליות",
+      "addCommand": "הוספת פקודה",
+      "authRequired": "יש להתחבר לשרת התמלול בהגדרות הכלליות כדי לנהל פקודות.",
+      "searchPlaceholder": "חיפוש פקודות וביטויים...",
+      "filters": {
+        "allSources": "כל הפקודות",
+        "allTypes": "כל הסוגים",
+        "allLanguages": "כל השפות"
+      },
+      "total": "סה״כ: {{count}}",
+      "loading": "טוען...",
+      "empty": "לא נמצא דבר",
+      "loadMore": "הצג עוד",
+      "badge": {
+        "global": "רגילה",
+        "user": "שלי"
+      },
+      "phraseCount": "{{enabled}}/{{total}} ביטויים",
+      "disableCommand": "השבתה עבורי",
+      "enableCommand": "הפעלה",
+      "delete": "מחיקת פקודה",
+      "deleteCommandConfirm": "למחוק את הפקודה “{{name}}” על כל הביטויים שלה?",
+      "deleted": "הפקודה נמחקה",
+      "edit": "עריכה",
+      "save": "שמירה",
+      "saving": "שומר...",
+      "cancel": "ביטול",
+      "create": "יצירה",
+      "created": "הפקודה נוצרה",
+      "createTitle": "פקודה חדשה",
+      "form": {
+        "name": "שם הפקודה",
+        "replacement": "טקסט חלופי",
+        "phrases": "ביטויים קוליים (לפחות אחד)"
+      },
+      "phrasePlaceholder": "ביטוי קולי, למשל “שורה חדשה”",
+      "addPhrase": "הוספה",
+      "addPhraseRow": "ביטוי נוסף",
+      "disablePhrase": "השבתת הביטוי עבורי",
+      "enablePhrase": "הפעלת הביטוי",
+      "deletePhrase": "מחיקת הביטוי",
+      "opType": {
+        "insert_text": "הוספת טקסט",
+        "opening_mark": "סימן פותח",
+        "closing_mark": "סימן סוגר",
+        "sentence_terminator": "סוף משפט",
+        "toggle_mark": "סימן זוגי",
+        "newline": "שורה חדשה",
+        "paragraph": "פסקה חדשה"
+      },
+      "opTypeHint": {
+        "insert_text": "מוסיף את הטקסט כמילה או בלוק נפרד.",
+        "opening_mark": "הסימן נצמד למילה הבאה, למשל סוגריים פותחים.",
+        "closing_mark": "הסימן נצמד למילה הקודמת, למשל פסיק או סוגריים סוגרים.",
+        "sentence_terminator": "מסיים את המשפט; המילה הבאה מתחילה באות גדולה.",
+        "toggle_mark": "פותח וסוגר לסירוגין סימן זוגי, למשל מרכאות.",
+        "newline": "מתחיל שורה חדשה. אין צורך בטקסט חלופי.",
+        "paragraph": "מתחיל פסקה חדשה. אין צורך בטקסט חלופי."
+      },
+      "errors": {
+        "duplicate": "ביטוי כזה כבר קיים",
+        "generic": "משהו השתבש. נסו שוב."
       }
     }
   },

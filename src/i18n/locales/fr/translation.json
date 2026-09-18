@@ -16,7 +16,8 @@
     "history": "Historique",
     "debug": "Débogage",
     "about": "À propos",
-    "transcripts": "Transcripts"
+    "transcripts": "Transcripts",
+    "dictation": "Commandes vocales"
   },
   "onboarding": {
     "subtitle": "Pour commencer, choisissez un modèle de transcription",
@@ -684,7 +685,7 @@
     "transcripts": {
       "title": "Audio transcripts",
       "dropTitle": "Drag audio files here or click to choose",
-      "dropHint": "mp3, m4a, wav, ogg, flac and more · up to 10 files at once",
+      "dropHint": "mp3, m4a, wav, mp4 · jusqu'à 10 fichiers · jusqu'à 200 Mo chacun",
       "dropOverlay": "Drop audio files to upload",
       "filePickerFilter": "Audio files",
       "empty": "No uploads yet. Drop audio files here to get transcripts.",
@@ -700,6 +701,7 @@
       "retry": "Retry",
       "delete": "Delete",
       "deleteConfirm": "Delete this audio and its transcript?",
+      "deleteLocalConfirm": "Retirer cet enregistrement de la liste ? La transcription reste sur le serveur.",
       "readyToast": "{{name}} — transcript ready",
       "failedToast": "{{name}} — transcription failed",
       "status": {
@@ -722,7 +724,74 @@
         "transcription_failed": "Transcription failed",
         "consultation_deleted": "Deleted on the server",
         "deleteFailed": "Failed to delete. Try again.",
-        "audioUnavailable": "Audio is not available yet"
+        "audioUnavailable": "Audio is not available yet",
+        "file_too_large": "Le fichier dépasse la limite de 200 Mo",
+        "job_deleted": "Supprimé sur le serveur"
+      }
+    },
+    "dictation": {
+      "title": "Commandes vocales",
+      "addCommand": "Ajouter une commande",
+      "authRequired": "Connectez-vous au serveur de transcription dans les réglages généraux pour gérer les commandes.",
+      "searchPlaceholder": "Rechercher commandes et phrases...",
+      "filters": {
+        "allSources": "Toutes les commandes",
+        "allTypes": "Tous les types",
+        "allLanguages": "Toutes les langues"
+      },
+      "total": "Total : {{count}}",
+      "loading": "Chargement...",
+      "empty": "Aucun résultat",
+      "loadMore": "Afficher plus",
+      "badge": {
+        "global": "Standard",
+        "user": "Personnelle"
+      },
+      "phraseCount": "{{enabled}}/{{total}} phrases",
+      "disableCommand": "Désactiver pour moi",
+      "enableCommand": "Activer",
+      "delete": "Supprimer la commande",
+      "deleteCommandConfirm": "Supprimer la commande « {{name}} » et toutes ses phrases ?",
+      "deleted": "Commande supprimée",
+      "edit": "Modifier",
+      "save": "Enregistrer",
+      "saving": "Enregistrement...",
+      "cancel": "Annuler",
+      "create": "Créer",
+      "created": "Commande créée",
+      "createTitle": "Nouvelle commande",
+      "form": {
+        "name": "Nom de la commande",
+        "replacement": "Texte de remplacement",
+        "phrases": "Phrases vocales (au moins une)"
+      },
+      "phrasePlaceholder": "Phrase vocale, ex. « à la ligne »",
+      "addPhrase": "Ajouter",
+      "addPhraseRow": "Autre phrase",
+      "disablePhrase": "Désactiver la phrase pour moi",
+      "enablePhrase": "Activer la phrase",
+      "deletePhrase": "Supprimer la phrase",
+      "opType": {
+        "insert_text": "Insérer du texte",
+        "opening_mark": "Signe ouvrant",
+        "closing_mark": "Signe fermant",
+        "sentence_terminator": "Fin de phrase",
+        "toggle_mark": "Signe apparié",
+        "newline": "Nouvelle ligne",
+        "paragraph": "Nouveau paragraphe"
+      },
+      "opTypeHint": {
+        "insert_text": "Insère le texte comme mot ou bloc séparé.",
+        "opening_mark": "Le signe s'attache au mot suivant, ex. parenthèse ouvrante.",
+        "closing_mark": "Le signe s'attache au mot précédent, ex. virgule ou parenthèse fermante.",
+        "sentence_terminator": "Termine la phrase ; le mot suivant commence par une majuscule.",
+        "toggle_mark": "Ouvre et ferme alternativement un signe apparié, ex. guillemets.",
+        "newline": "Commence une nouvelle ligne. Aucun texte de remplacement requis.",
+        "paragraph": "Commence un nouveau paragraphe. Aucun texte de remplacement requis."
+      },
+      "errors": {
+        "duplicate": "Cette phrase existe déjà",
+        "generic": "Une erreur est survenue. Réessayez."
       }
     }
   },

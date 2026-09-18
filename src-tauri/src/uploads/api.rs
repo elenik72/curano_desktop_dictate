@@ -1,7 +1,8 @@
-//! HTTP client for the Curano consultations API.
+//! HTTP client for the Curano API (shared `ApiCtx`) and the standalone
+//! transcription-jobs endpoints used by the uploads feature.
 //!
-//! All requests run in Rust: the GCS signed-url PUT would hit CORS from the
-//! webview, and the LiveSTT JWT lives on this side anyway.
+//! All requests run in Rust: the JWT lives on this side and the webview
+//! would hit CORS.
 
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
@@ -16,11 +17,10 @@ use tokio_util::sync::CancellationToken;
 use crate::livestt::auth::ensure_fresh_livestt_access_token;
 use crate::settings;
 
-/// Consultations created by the app default to this patient. If it does not
-/// exist on the server, a technical patient is created transparently.
-pub const DEFAULT_PATIENT_ID: i64 = 1287;
-
 const JSON_TIMEOUT: Duration = Duration::from_secs(30);
+
+/// Server-side limit for `POST /api/transcriptions` uploads (~200 MB).
+pub const MAX_UPLOAD_BYTES: u64 = 200 * 1024 * 1024;
 
 pub struct ApiCtx {
     pub base_url: String,
@@ -28,17 +28,11 @@ pub struct ApiCtx {
     client: reqwest::Client,
 }
 
-pub enum CreateConsultationError {
-    /// The patient id was rejected — caller should create the technical
-    /// patient and retry.
-    PatientRejected(String),
-    Other(String),
-}
-
-pub struct RemoteAudio {
-    pub id: i64,
+/// State of a standalone transcription job (`GET /api/transcriptions/{id}`).
+pub struct TranscriptionJob {
     pub status: String,
     pub transcription_text: Option<String>,
+    pub error_message: Option<String>,
 }
 
 pub async fn api_ctx(app: &AppHandle) -> Result<ApiCtx, String> {
@@ -47,8 +41,11 @@ pub async fn api_ctx(app: &AppHandle) -> Result<ApiCtx, String> {
         settings::validate_livestt_server_url_required(&app_settings.livestt_server_url)?;
     let token = ensure_fresh_livestt_access_token(app).await?;
 
+    // HTTP/1.1 only: streamed multipart bodies over HTTP/2 through the CDN
+    // intermittently die with mid-stream resets ("error sending request").
     let client = reqwest::Client::builder()
         .connect_timeout(Duration::from_secs(15))
+        .http1_only()
         .build()
         .map_err(|e| format!("Failed to build HTTP client: {}", e))?;
 
@@ -59,8 +56,24 @@ pub async fn api_ctx(app: &AppHandle) -> Result<ApiCtx, String> {
     })
 }
 
-fn json_field<'a>(value: &'a Value, snake: &str, camel: &str) -> Option<&'a Value> {
-    value.get(snake).or_else(|| value.get(camel))
+/// Full error chain ("error sending request: connection reset by peer"
+/// instead of just the top-level message).
+fn error_chain(error: reqwest::Error) -> String {
+    let mut parts = Vec::new();
+    let mut source = std::error::Error::source(&error);
+    while let Some(inner) = source {
+        parts.push(inner.to_string());
+        source = inner.source();
+    }
+
+    let mut text = error.without_url().to_string();
+    for part in parts {
+        if !text.contains(&part) {
+            text.push_str(": ");
+            text.push_str(&part);
+        }
+    }
+    text
 }
 
 /// Flatten a FastAPI error body (`detail` as string or validation array)
@@ -116,192 +129,36 @@ impl ApiCtx {
             .timeout(JSON_TIMEOUT)
     }
 
-    pub async fn create_consultation(
+    pub fn get(&self, url: &str) -> reqwest::RequestBuilder {
+        self.auth(self.client.get(url))
+    }
+
+    pub fn post(&self, url: &str) -> reqwest::RequestBuilder {
+        self.auth(self.client.post(url))
+    }
+
+    pub fn patch(&self, url: &str) -> reqwest::RequestBuilder {
+        self.auth(self.client.patch(url))
+    }
+
+    pub fn put(&self, url: &str) -> reqwest::RequestBuilder {
+        self.auth(self.client.put(url))
+    }
+
+    pub fn delete(&self, url: &str) -> reqwest::RequestBuilder {
+        self.auth(self.client.delete(url))
+    }
+
+    /// Upload a local audio file to `POST /api/transcriptions` as multipart,
+    /// reporting progress 0-100. Returns the created job id.
+    pub async fn create_transcription_job(
         &self,
-        patient_id: i64,
-    ) -> Result<i64, CreateConsultationError> {
-        let url = format!("{}/api/consultations/", self.base_url);
-        let payload = serde_json::json!({
-            "patient_id": patient_id,
-            "consultation_type": "initial",
-            "consultation_date": chrono::Utc::now().to_rfc3339(),
-            "language": "DE",
-        });
-
-        let response = self
-            .auth(self.client.post(&url))
-            .json(&payload)
-            .send()
-            .await
-            .map_err(|e| {
-                CreateConsultationError::Other(format!(
-                    "Consultation create request failed: {}",
-                    e.without_url()
-                ))
-            })?;
-
-        let (status, value) = read_json_response(response, "consultation create")
-            .await
-            .map_err(CreateConsultationError::Other)?;
-
-        if !status.is_success() {
-            let detail = extract_error_detail(&value);
-            let message = match &detail {
-                Some(detail) => format!(
-                    "Consultation create failed with status {}: {}",
-                    status, detail
-                ),
-                None => format!("Consultation create failed with status {}", status),
-            };
-
-            // Only a complaint about the patient itself justifies the
-            // technical-patient fallback; other 4xx are payload bugs and
-            // retrying with a new patient would just create junk patients.
-            let patient_rejected = matches!(
-                status,
-                reqwest::StatusCode::NOT_FOUND
-                    | reqwest::StatusCode::BAD_REQUEST
-                    | reqwest::StatusCode::UNPROCESSABLE_ENTITY
-            ) && detail
-                .as_deref()
-                .is_some_and(|d| d.to_ascii_lowercase().contains("patient"));
-
-            return Err(if patient_rejected {
-                CreateConsultationError::PatientRejected(message)
-            } else {
-                CreateConsultationError::Other(message)
-            });
-        }
-
-        value.get("id").and_then(Value::as_i64).ok_or_else(|| {
-            CreateConsultationError::Other("Consultation create response missing id".to_string())
-        })
-    }
-
-    /// Create the technical patient used as a container for app uploads.
-    pub async fn create_technical_patient(&self) -> Result<i64, String> {
-        let url = format!("{}/api/patients/", self.base_url);
-        let payload = serde_json::json!({
-            "first_name": "Dictate",
-            "last_name": "Uploads",
-            "date_of_birth": "1970-01-01",
-        });
-
-        let response = self
-            .auth(self.client.post(&url))
-            .json(&payload)
-            .send()
-            .await
-            .map_err(|e| format!("Patient create request failed: {}", e.without_url()))?;
-
-        let (status, value) = read_json_response(response, "patient create").await?;
-
-        if !status.is_success() {
-            return Err(format!("Patient create failed with status {}", status));
-        }
-
-        value
-            .get("id")
-            .and_then(Value::as_i64)
-            .ok_or_else(|| "Patient create response missing id".to_string())
-    }
-
-    pub async fn create_upload_url(
-        &self,
-        consultation_id: i64,
-        filename: &str,
-    ) -> Result<String, String> {
-        let url = format!(
-            "{}/api/consultations/{}/audios/upload-url",
-            self.base_url, consultation_id
-        );
-
-        let response = self
-            .auth(self.client.post(&url))
-            .query(&[("filename", filename)])
-            .send()
-            .await
-            .map_err(|e| format!("Upload URL request failed: {}", e.without_url()))?;
-
-        let (status, value) = read_json_response(response, "upload URL").await?;
-
-        if !status.is_success() {
-            return Err(format!("Upload URL request failed with status {}", status));
-        }
-
-        json_field(&value, "signed_url", "signedUrl")
-            .and_then(Value::as_str)
-            .map(str::to_string)
-            .ok_or_else(|| "Upload URL response missing signed_url".to_string())
-    }
-
-    pub async fn list_audios(&self, consultation_id: i64) -> Result<Vec<RemoteAudio>, String> {
-        let url = format!(
-            "{}/api/consultations/{}/audios",
-            self.base_url, consultation_id
-        );
-
-        let response = self
-            .auth(self.client.get(&url))
-            .send()
-            .await
-            .map_err(|e| format!("Audio list request failed: {}", e.without_url()))?;
-
-        let (status, value) = read_json_response(response, "audio list").await?;
-
-        if status == reqwest::StatusCode::NOT_FOUND {
-            return Err("consultation_not_found".to_string());
-        }
-
-        if !status.is_success() {
-            return Err(format!("Audio list failed with status {}", status));
-        }
-
-        let items = value
-            .as_array()
-            .ok_or_else(|| "Audio list response is not an array".to_string())?;
-
-        Ok(items
-            .iter()
-            .filter_map(|item| {
-                Some(RemoteAudio {
-                    id: item.get("id")?.as_i64()?,
-                    status: item.get("status")?.as_str()?.to_string(),
-                    transcription_text: json_field(item, "transcription_text", "transcriptionText")
-                        .and_then(Value::as_str)
-                        .map(str::to_string),
-                })
-            })
-            .collect())
-    }
-
-    pub async fn delete_consultation(&self, consultation_id: i64) -> Result<(), String> {
-        let url = format!("{}/api/consultations/{}", self.base_url, consultation_id);
-
-        let response = self
-            .auth(self.client.delete(&url))
-            .send()
-            .await
-            .map_err(|e| format!("Consultation delete request failed: {}", e.without_url()))?;
-
-        let status = response.status();
-        // Already gone server-side is fine — the goal is removal.
-        if status.is_success() || status == reqwest::StatusCode::NOT_FOUND {
-            Ok(())
-        } else {
-            Err(format!("Consultation delete failed with status {}", status))
-        }
-    }
-
-    /// Stream a local file to a GCS signed URL, reporting progress 0-100.
-    pub async fn put_signed_url(
-        &self,
-        signed_url: &str,
         path: &str,
-        content_type: &str,
+        file_name: &str,
+        dictation: bool,
         on_progress: impl Fn(u8) + Send + Sync + 'static,
         cancel: CancellationToken,
-    ) -> Result<(), String> {
+    ) -> Result<i64, String> {
         let file = tokio::fs::File::open(path)
             .await
             .map_err(|e| format!("Failed to open file: {}", e))?;
@@ -313,6 +170,9 @@ impl ApiCtx {
 
         if total == 0 {
             return Err("File is empty".to_string());
+        }
+        if total > MAX_UPLOAD_BYTES {
+            return Err("file_too_large".to_string());
         }
 
         let sent = Arc::new(AtomicU64::new(0));
@@ -332,27 +192,89 @@ impl ApiCtx {
             }
         });
 
+        let part =
+            reqwest::multipart::Part::stream_with_length(reqwest::Body::wrap_stream(stream), total)
+                .file_name(file_name.to_string())
+                .mime_str(content_type_for(file_name))
+                .map_err(|e| format!("Failed to build upload part: {}", e))?;
+
+        let form = reqwest::multipart::Form::new().part("file", part);
+
+        // No overall timeout: large files legitimately take minutes. Only
+        // the connect timeout on the client applies.
         let request = self
             .client
-            .put(signed_url)
-            .header(reqwest::header::CONTENT_TYPE, content_type)
-            .header(reqwest::header::CONTENT_LENGTH, total)
-            .body(reqwest::Body::wrap_stream(stream))
+            .post(format!("{}/api/transcriptions", self.base_url))
+            .bearer_auth(&self.token)
+            .header(reqwest::header::ACCEPT, "application/json")
+            .query(&[("dictation", if dictation { "true" } else { "false" })])
+            .multipart(form)
             .send();
 
         let response = tokio::select! {
             _ = cancel.cancelled() => return Err("cancelled".to_string()),
             result = request => result.map_err(|e| {
-                format!("File upload failed: {}", e.without_url())
+                format!("File upload failed: {}", error_chain(e))
             })?,
         };
 
-        let status = response.status();
-        if !status.is_success() {
-            return Err(format!("File upload failed with status {}", status));
+        let (status, value) = read_json_response(response, "transcription upload").await?;
+
+        if status == reqwest::StatusCode::PAYLOAD_TOO_LARGE {
+            return Err("file_too_large".to_string());
         }
 
-        Ok(())
+        if !status.is_success() {
+            return Err(match extract_error_detail(&value) {
+                Some(detail) => format!("Upload failed ({}): {}", status.as_u16(), detail),
+                None => format!("Upload failed with status {}", status),
+            });
+        }
+
+        value
+            .get("id")
+            .and_then(Value::as_i64)
+            .ok_or_else(|| "Transcription upload response missing id".to_string())
+    }
+
+    pub async fn get_transcription_job(&self, job_id: i64) -> Result<TranscriptionJob, String> {
+        let url = format!("{}/api/transcriptions/{}", self.base_url, job_id);
+
+        let response = self
+            .get(&url)
+            .send()
+            .await
+            .map_err(|e| format!("Transcription status request failed: {}", e.without_url()))?;
+
+        let (status, value) = read_json_response(response, "transcription status").await?;
+
+        if status == reqwest::StatusCode::NOT_FOUND {
+            return Err("job_not_found".to_string());
+        }
+
+        if !status.is_success() {
+            return Err(format!(
+                "Transcription status failed with status {}",
+                status
+            ));
+        }
+
+        Ok(TranscriptionJob {
+            status: value
+                .get("status")
+                .and_then(Value::as_str)
+                .unwrap_or_default()
+                .to_string(),
+            transcription_text: value
+                .get("transcription_text")
+                .and_then(Value::as_str)
+                .map(str::to_string),
+            error_message: value
+                .get("error_message")
+                .and_then(Value::as_str)
+                .filter(|s| !s.trim().is_empty())
+                .map(str::to_string),
+        })
     }
 }
 
@@ -368,22 +290,12 @@ pub fn content_type_for(file_name: &str) -> &'static str {
         "m4a" => "audio/mp4",
         "mp4" => "audio/mp4",
         "wav" => "audio/wav",
-        "ogg" | "oga" => "audio/ogg",
-        "opus" => "audio/opus",
-        "flac" => "audio/flac",
-        "aac" => "audio/aac",
-        "webm" => "audio/webm",
-        "amr" => "audio/amr",
-        "wma" => "audio/x-ms-wma",
-        "aif" | "aiff" => "audio/aiff",
         _ => "application/octet-stream",
     }
 }
 
-pub const SUPPORTED_EXTENSIONS: &[&str] = &[
-    "mp3", "m4a", "mp4", "wav", "ogg", "oga", "opus", "flac", "aac", "webm", "amr", "wma", "aif",
-    "aiff",
-];
+/// Formats accepted by `POST /api/transcriptions`.
+pub const SUPPORTED_EXTENSIONS: &[&str] = &["mp3", "m4a", "wav", "mp4"];
 
 pub fn is_supported_audio(file_name: &str) -> bool {
     let ext = file_name

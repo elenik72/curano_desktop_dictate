@@ -16,7 +16,8 @@
     "history": "Lịch sử",
     "debug": "Gỡ lỗi",
     "about": "Giới thiệu",
-    "transcripts": "Transcripts"
+    "transcripts": "Transcripts",
+    "dictation": "Lệnh thoại"
   },
   "onboarding": {
     "subtitle": "Để bắt đầu, hãy chọn một mô hình chuyển đổi giọng nói",
@@ -684,7 +685,7 @@
     "transcripts": {
       "title": "Audio transcripts",
       "dropTitle": "Drag audio files here or click to choose",
-      "dropHint": "mp3, m4a, wav, ogg, flac and more · up to 10 files at once",
+      "dropHint": "mp3, m4a, wav, mp4 · tối đa 10 tệp · mỗi tệp tối đa 200 MB",
       "dropOverlay": "Drop audio files to upload",
       "filePickerFilter": "Audio files",
       "empty": "No uploads yet. Drop audio files here to get transcripts.",
@@ -700,6 +701,7 @@
       "retry": "Retry",
       "delete": "Delete",
       "deleteConfirm": "Delete this audio and its transcript?",
+      "deleteLocalConfirm": "Xóa bản ghi này khỏi danh sách? Bản chép lời vẫn còn trên máy chủ.",
       "readyToast": "{{name}} — transcript ready",
       "failedToast": "{{name}} — transcription failed",
       "status": {
@@ -722,7 +724,74 @@
         "transcription_failed": "Transcription failed",
         "consultation_deleted": "Deleted on the server",
         "deleteFailed": "Failed to delete. Try again.",
-        "audioUnavailable": "Audio is not available yet"
+        "audioUnavailable": "Audio is not available yet",
+        "file_too_large": "Tệp vượt quá giới hạn 200 MB",
+        "job_deleted": "Đã xóa trên máy chủ"
+      }
+    },
+    "dictation": {
+      "title": "Lệnh thoại",
+      "addCommand": "Thêm lệnh",
+      "authRequired": "Đăng nhập vào máy chủ chép lời trong cài đặt chung để quản lý lệnh.",
+      "searchPlaceholder": "Tìm lệnh và cụm từ...",
+      "filters": {
+        "allSources": "Tất cả lệnh",
+        "allTypes": "Tất cả loại",
+        "allLanguages": "Tất cả ngôn ngữ"
+      },
+      "total": "Tổng: {{count}}",
+      "loading": "Đang tải...",
+      "empty": "Không tìm thấy gì",
+      "loadMore": "Hiển thị thêm",
+      "badge": {
+        "global": "Chuẩn",
+        "user": "Của tôi"
+      },
+      "phraseCount": "{{enabled}}/{{total}} cụm từ",
+      "disableCommand": "Tắt cho riêng tôi",
+      "enableCommand": "Bật",
+      "delete": "Xóa lệnh",
+      "deleteCommandConfirm": "Xóa lệnh “{{name}}” cùng tất cả cụm từ của nó?",
+      "deleted": "Đã xóa lệnh",
+      "edit": "Chỉnh sửa",
+      "save": "Lưu",
+      "saving": "Đang lưu...",
+      "cancel": "Hủy",
+      "create": "Tạo",
+      "created": "Đã tạo lệnh",
+      "createTitle": "Lệnh mới",
+      "form": {
+        "name": "Tên lệnh",
+        "replacement": "Văn bản thay thế",
+        "phrases": "Cụm từ thoại (ít nhất một)"
+      },
+      "phrasePlaceholder": "Cụm từ thoại, ví dụ “xuống dòng”",
+      "addPhrase": "Thêm",
+      "addPhraseRow": "Thêm cụm từ",
+      "disablePhrase": "Tắt cụm từ cho riêng tôi",
+      "enablePhrase": "Bật cụm từ",
+      "deletePhrase": "Xóa cụm từ",
+      "opType": {
+        "insert_text": "Chèn văn bản",
+        "opening_mark": "Dấu mở",
+        "closing_mark": "Dấu đóng",
+        "sentence_terminator": "Kết câu",
+        "toggle_mark": "Dấu cặp",
+        "newline": "Dòng mới",
+        "paragraph": "Đoạn mới"
+      },
+      "opTypeHint": {
+        "insert_text": "Chèn văn bản như một từ hoặc khối riêng.",
+        "opening_mark": "Dấu gắn vào từ tiếp theo, ví dụ dấu ngoặc mở.",
+        "closing_mark": "Dấu gắn vào từ trước đó, ví dụ dấu phẩy hoặc ngoặc đóng.",
+        "sentence_terminator": "Kết thúc câu; từ tiếp theo viết hoa chữ đầu.",
+        "toggle_mark": "Lần lượt mở và đóng dấu cặp, ví dụ dấu ngoặc kép.",
+        "newline": "Bắt đầu dòng mới. Không cần văn bản thay thế.",
+        "paragraph": "Bắt đầu đoạn mới. Không cần văn bản thay thế."
+      },
+      "errors": {
+        "duplicate": "Cụm từ này đã tồn tại",
+        "generic": "Đã xảy ra lỗi. Vui lòng thử lại."
       }
     }
   },

@@ -16,7 +16,8 @@
     "debug": "تصحيح الأخطاء",
     "about": "حول",
     "models": "النماذج",
-    "transcripts": "Transcripts"
+    "transcripts": "Transcripts",
+    "dictation": "الأوامر الصوتية"
   },
   "onboarding": {
     "subtitle": "للبدء، اختر نموذج التفريغ الصوتي",
@@ -684,7 +685,7 @@
     "transcripts": {
       "title": "Audio transcripts",
       "dropTitle": "Drag audio files here or click to choose",
-      "dropHint": "mp3, m4a, wav, ogg, flac and more · up to 10 files at once",
+      "dropHint": "mp3, m4a, wav, mp4 · حتى 10 ملفات · حتى 200 ميغابايت لكل ملف",
       "dropOverlay": "Drop audio files to upload",
       "filePickerFilter": "Audio files",
       "empty": "No uploads yet. Drop audio files here to get transcripts.",
@@ -700,6 +701,7 @@
       "retry": "Retry",
       "delete": "Delete",
       "deleteConfirm": "Delete this audio and its transcript?",
+      "deleteLocalConfirm": "هل تريد إزالة هذا التسجيل من القائمة؟ سيبقى النص المفرّغ على الخادم.",
       "readyToast": "{{name}} — transcript ready",
       "failedToast": "{{name}} — transcription failed",
       "status": {
@@ -722,7 +724,74 @@
         "transcription_failed": "Transcription failed",
         "consultation_deleted": "Deleted on the server",
         "deleteFailed": "Failed to delete. Try again.",
-        "audioUnavailable": "Audio is not available yet"
+        "audioUnavailable": "Audio is not available yet",
+        "file_too_large": "الملف يتجاوز حد 200 ميغابايت",
+        "job_deleted": "تم الحذف على الخادم"
+      }
+    },
+    "dictation": {
+      "title": "الأوامر الصوتية",
+      "addCommand": "إضافة أمر",
+      "authRequired": "سجّل الدخول إلى خادم التفريغ من الإعدادات العامة لإدارة الأوامر.",
+      "searchPlaceholder": "البحث في الأوامر والعبارات...",
+      "filters": {
+        "allSources": "كل الأوامر",
+        "allTypes": "كل الأنواع",
+        "allLanguages": "كل اللغات"
+      },
+      "total": "الإجمالي: {{count}}",
+      "loading": "جارٍ التحميل...",
+      "empty": "لم يُعثر على شيء",
+      "loadMore": "عرض المزيد",
+      "badge": {
+        "global": "قياسي",
+        "user": "خاص بي"
+      },
+      "phraseCount": "{{enabled}}/{{total}} عبارة",
+      "disableCommand": "تعطيل بالنسبة لي",
+      "enableCommand": "تفعيل",
+      "delete": "حذف الأمر",
+      "deleteCommandConfirm": "هل تريد حذف الأمر “{{name}}” مع كل عباراته؟",
+      "deleted": "تم حذف الأمر",
+      "edit": "تعديل",
+      "save": "حفظ",
+      "saving": "جارٍ الحفظ...",
+      "cancel": "إلغاء",
+      "create": "إنشاء",
+      "created": "تم إنشاء الأمر",
+      "createTitle": "أمر جديد",
+      "form": {
+        "name": "اسم الأمر",
+        "replacement": "نص الاستبدال",
+        "phrases": "عبارات صوتية (واحدة على الأقل)"
+      },
+      "phrasePlaceholder": "عبارة صوتية، مثل “سطر جديد”",
+      "addPhrase": "إضافة",
+      "addPhraseRow": "عبارة أخرى",
+      "disablePhrase": "تعطيل العبارة بالنسبة لي",
+      "enablePhrase": "تفعيل العبارة",
+      "deletePhrase": "حذف العبارة",
+      "opType": {
+        "insert_text": "إدراج نص",
+        "opening_mark": "علامة فتح",
+        "closing_mark": "علامة إغلاق",
+        "sentence_terminator": "نهاية الجملة",
+        "toggle_mark": "علامة مزدوجة",
+        "newline": "سطر جديد",
+        "paragraph": "فقرة جديدة"
+      },
+      "opTypeHint": {
+        "insert_text": "يدرج النص ككلمة أو كتلة مستقلة.",
+        "opening_mark": "تلتصق العلامة بالكلمة التالية، مثل قوس الفتح.",
+        "closing_mark": "تلتصق العلامة بالكلمة السابقة، مثل الفاصلة أو قوس الإغلاق.",
+        "sentence_terminator": "ينهي الجملة؛ وتبدأ الكلمة التالية بحرف كبير.",
+        "toggle_mark": "يفتح ويغلق علامة مزدوجة بالتناوب، مثل علامات الاقتباس.",
+        "newline": "يبدأ سطرًا جديدًا. لا حاجة لنص استبدال.",
+        "paragraph": "يبدأ فقرة جديدة. لا حاجة لنص استبدال."
+      },
+      "errors": {
+        "duplicate": "هذه العبارة موجودة بالفعل",
+        "generic": "حدث خطأ ما. حاول مرة أخرى."
       }
     }
   },

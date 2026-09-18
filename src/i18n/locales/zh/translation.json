@@ -16,7 +16,8 @@
     "history": "历史记录",
     "debug": "调试",
     "about": "关于",
-    "transcripts": "Transcripts"
+    "transcripts": "Transcripts",
+    "dictation": "语音命令"
   },
   "onboarding": {
     "subtitle": "请选择一个转录模型以开始使用",
@@ -684,7 +685,7 @@
     "transcripts": {
       "title": "Audio transcripts",
       "dropTitle": "Drag audio files here or click to choose",
-      "dropHint": "mp3, m4a, wav, ogg, flac and more · up to 10 files at once",
+      "dropHint": "mp3、m4a、wav、mp4 · 最多10个文件 · 每个最大200 MB",
       "dropOverlay": "Drop audio files to upload",
       "filePickerFilter": "Audio files",
       "empty": "No uploads yet. Drop audio files here to get transcripts.",
@@ -700,6 +701,7 @@
       "retry": "Retry",
       "delete": "Delete",
       "deleteConfirm": "Delete this audio and its transcript?",
+      "deleteLocalConfirm": "从列表中移除此录音?转写文本仍保留在服务器上。",
       "readyToast": "{{name}} — transcript ready",
       "failedToast": "{{name}} — transcription failed",
       "status": {
@@ -722,7 +724,74 @@
         "transcription_failed": "Transcription failed",
         "consultation_deleted": "Deleted on the server",
         "deleteFailed": "Failed to delete. Try again.",
-        "audioUnavailable": "Audio is not available yet"
+        "audioUnavailable": "Audio is not available yet",
+        "file_too_large": "文件超过200 MB限制",
+        "job_deleted": "已在服务器上删除"
+      }
+    },
+    "dictation": {
+      "title": "语音命令",
+      "addCommand": "添加命令",
+      "authRequired": "请在常规设置中登录转写服务器以管理命令。",
+      "searchPlaceholder": "搜索命令和短语...",
+      "filters": {
+        "allSources": "全部命令",
+        "allTypes": "全部类型",
+        "allLanguages": "全部语言"
+      },
+      "total": "共 {{count}} 条",
+      "loading": "加载中...",
+      "empty": "未找到内容",
+      "loadMore": "显示更多",
+      "badge": {
+        "global": "标准",
+        "user": "我的"
+      },
+      "phraseCount": "{{enabled}}/{{total}} 条短语",
+      "disableCommand": "对我禁用",
+      "enableCommand": "启用",
+      "delete": "删除命令",
+      "deleteCommandConfirm": "删除命令“{{name}}”及其所有短语?",
+      "deleted": "命令已删除",
+      "edit": "编辑",
+      "save": "保存",
+      "saving": "保存中...",
+      "cancel": "取消",
+      "create": "创建",
+      "created": "命令已创建",
+      "createTitle": "新建命令",
+      "form": {
+        "name": "命令名称",
+        "replacement": "替换文本",
+        "phrases": "语音短语(至少一条)"
+      },
+      "phrasePlaceholder": "语音短语,例如“换行”",
+      "addPhrase": "添加",
+      "addPhraseRow": "再加一条短语",
+      "disablePhrase": "对我禁用该短语",
+      "enablePhrase": "启用该短语",
+      "deletePhrase": "删除该短语",
+      "opType": {
+        "insert_text": "插入文本",
+        "opening_mark": "开符号",
+        "closing_mark": "闭符号",
+        "sentence_terminator": "句末",
+        "toggle_mark": "成对符号",
+        "newline": "换行",
+        "paragraph": "新段落"
+      },
+      "opTypeHint": {
+        "insert_text": "将文本作为独立的词或块插入。",
+        "opening_mark": "符号附着到下一个词,例如左括号。",
+        "closing_mark": "符号附着到上一个词,例如逗号或右括号。",
+        "sentence_terminator": "结束句子;下一个词以大写字母开头。",
+        "toggle_mark": "交替开合成对符号,例如引号。",
+        "newline": "开始新行。无需替换文本。",
+        "paragraph": "开始新段落。无需替换文本。"
+      },
+      "errors": {
+        "duplicate": "该短语已存在",
+        "generic": "出了点问题,请重试。"
       }
     }
   },
